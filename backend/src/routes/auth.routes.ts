@@ -1,5 +1,8 @@
-import { Router } from "express";
-import { register, login, logout } from "../controllers/auth.controller";
+import { Router } from 'express';
+import { register, login, logout, refreshToken } from '../controllers/auth.controller';
+import { validate } from '../middleware/validation.middleware';
+import { AuthSchema } from '../utils/auth.validator';
+import { refreshTokenMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -14,17 +17,7 @@ const router = Router();
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 example: user@example.com
- *               password:
- *                 type: string
- *                 example: password123
+ *             $ref: '#/components/schemas/AuthInput'
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -33,7 +26,7 @@ const router = Router();
  *       409:
  *         description: Email already in use
  */
-router.post("/register", register);
+router.post('/register', validate(AuthSchema), register);
 
 /**
  * @openapi
@@ -46,24 +39,14 @@ router.post("/register", register);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 example: user@example.com
- *               password:
- *                 type: string
- *                 example: password123
+ *             $ref: '#/components/schemas/AuthInput'
  *     responses:
  *       200:
  *         description: Login successful
  *       401:
  *         description: Invalid credentials
  */
-router.post("/login", login);
+router.post('/login', validate(AuthSchema), login);
 
 /**
  * @openapi
@@ -71,6 +54,8 @@ router.post("/login", login);
  *   post:
  *     summary: User logout
  *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -86,8 +71,37 @@ router.post("/login", login);
  *       200:
  *         description: Logged out successfully
  *       400:
- *         description: Refresh token required
+ *         description: Refresh token is required
+ *       401:
+ *         description: Unauthorized
  */
-router.post("/logout", logout);
+router.post('/logout', refreshTokenMiddleware, logout);
+
+/**
+ * @openapi
+ * /api/auth/refresh-token:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Access token refreshed successfully
+ *       401:
+ *         description: Refresh token is required
+ *       403:
+ *         description: Invalid or expired refresh token
+ */
+router.post('/refresh-token', refreshTokenMiddleware, refreshToken);
 
 export default router;

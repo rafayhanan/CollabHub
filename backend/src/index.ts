@@ -1,47 +1,58 @@
-import express from "express";
+import express from 'express';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import authRoutes from "./routes/auth.routes";
-import { setupSwagger } from "./config/swagger";
+import cors from 'cors';
+import compression from 'compression';
+import authRoutes from './routes/auth.routes';
+import { setupSwagger } from './config/swagger';
+import logger from './utils/logger';
+import { errorHandler } from './middleware/error.middleware';
 
 dotenv.config();
-
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-setupSwagger(app);
-
-// Basic security headers
-app.use(helmet());
-
-// Basic rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 
-// Stricter rate limiting for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 5, // limit each IP to 5 auth requests per windowMs
-  message: 'Too many authentication attempts, please try again later.'
+  max: 10, // limit each IP to 10 auth-related requests per windowMs
+  message: 'Too many authentication requests from this IP, please try again after 15 minutes',
 });
 
-app.use(limiter);
+// Setup middleware
+app.use(cors()); // Enable CORS
+app.use(helmet()); // Set security headers
+app.use(compression()); // Compress responses
 app.use(express.json());
+app.use(limiter); // Apply general rate limiting
 
-app.get("/", (req, res) => {
-    res.send("Hello World");
+setupSwagger(app);
+
+// Routes
+app.use('/api/auth', authLimiter, authRoutes);
+
+// Centralized error handler
+app.use(errorHandler);
+
+const server = app.listen(PORT, () => {
+  logger.info(`Server is running on port ${PORT}`);
+  logger.info(`Swagger docs available at http://localhost:${PORT}/api-docs`);
 });
 
-app.use("/api/auth", authLimiter, authRoutes);
+const gracefulShutdown = () => {
+  logger.info('Shutting down gracefully...');
+  server.close(() => {
+    logger.info('Server closed.');
+    process.exit(0);
+  });
+};
 
-
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Swagger docs at http://localhost:${PORT}/api-docs`);
-});
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);

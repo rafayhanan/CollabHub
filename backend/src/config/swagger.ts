@@ -16,6 +16,24 @@ const swaggerDefinition = {
     },
   ],
   components: {
+    schemas: {
+      AuthInput: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: {
+            type: 'string',
+            format: 'email',
+            description: 'User email address',
+          },
+          password: {
+            type: 'string',
+            minLength: 8,
+            description: 'User password',
+          },
+        },
+      },
+    },
     securitySchemes: {
       bearerAuth: {
         type: 'http',

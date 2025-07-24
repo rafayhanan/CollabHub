@@ -1,22 +1,36 @@
-import { Request, Response, NextFunction } from "express";
-import { verifyAccessToken, verifyRefreshToken } from "../utils/jwt";
+import { Response, NextFunction } from 'express';
+import { verifyAccessToken, verifyRefreshToken } from '../utils/jwt';
+import { AuthRequest } from '../utils/types';
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-        return res.status(401).json({ message: "Unauthorized" });
-    }
+export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized: Access token is required' });
+  }
+
+  try {
     const decoded = verifyAccessToken(token);
-    req.body.user = decoded;
+    req.user = decoded;
     next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Forbidden: Invalid or expired token' });
+  }
 };
 
-export const refreshToken = (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-        return res.status(401).json({ message: "Unauthorized" });
-    }
-    const decoded = verifyRefreshToken(token);
-    req.body.user = decoded;
+export const refreshTokenMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'Unauthorized: Refresh token is required' });
+  }
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken);
+    req.user = decoded;
     next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Forbidden: Invalid or expired refresh token' });
+  }
 };
