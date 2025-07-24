@@ -8,12 +8,44 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 model User {
   id             String         @id @default(uuid())
   email          String         @unique
   password       String
-  createdAt      DateTime       @default(now())
+  name           String?
+  bio            String?
+  avatarUrl      String?
+  projects       UserProject[]
   refreshTokens  RefreshToken[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Project {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  members     UserProject[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model UserProject {
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, projectId])
 }
 
 model RefreshToken {
