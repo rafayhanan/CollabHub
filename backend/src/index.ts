@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
 import { setupSwagger } from './config/swagger';
 import logger from './utils/logger';
@@ -31,6 +32,7 @@ app.use(cors()); // Enable CORS
 app.use(helmet()); // Set security headers
 app.use(compression()); // Compress responses
 app.use(express.json());
+app.use(cookieParser());
 app.use(limiter); // Apply general rate limiting
 
 setupSwagger(app);

@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { verifyAccessToken, verifyRefreshToken } from '../utils/jwt';
+import { verifyAccessToken } from '../utils/jwt';
 import { AuthRequest } from '../utils/types';
 
 export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -16,21 +16,5 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     next();
   } catch (error) {
     return res.status(403).json({ message: 'Forbidden: Invalid or expired token' });
-  }
-};
-
-export const refreshTokenMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const { refreshToken } = req.body;
-
-  if (!refreshToken) {
-    return res.status(401).json({ message: 'Unauthorized: Refresh token is required' });
-  }
-
-  try {
-    const decoded = verifyRefreshToken(refreshToken);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Forbidden: Invalid or expired refresh token' });
   }
 };

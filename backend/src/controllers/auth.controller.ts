@@ -3,7 +3,6 @@ import { hashPassword, verifyPassword } from "../utils/hash";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt";
 import prisma from "../config/prisma";
 import logger from "../utils/logger";
-import { AuthRequest } from "../utils/types";
 
 export const register = async (req: Request, res: Response) => {
     try {
@@ -29,10 +28,16 @@ export const register = async (req: Request, res: Response) => {
             },
         });
 
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+            sameSite: 'strict', // Prevent CSRF attacks
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
         return res.status(201).json({
-            message: "User registered successfully",
+            message: 'User registered successfully',
             accessToken,
-            refreshToken,
             user: {
                 id: user.id,
                 email: user.email,
@@ -73,10 +78,16 @@ export const login = async (req: Request, res: Response) => {
             },
         });
 
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
         return res.status(200).json({
-            message: "Login successful",
+            message: 'Login successful',
             accessToken,
-            refreshToken,
             user: {
                 id: user.id,
                 email: user.email,
@@ -88,39 +99,57 @@ export const login = async (req: Request, res: Response) => {
     }
 };
 
-export const logout = async (req: AuthRequest, res: Response) => {
+export const logout = async (req: Request, res: Response) => {
     try {
-        const { refreshToken } = req.body;
-        
+        const { refreshToken } = req.cookies;
+
+        if (!refreshToken) {
+            return res.status(400).json({ message: 'Refresh token not found' });
+        }
+
         await prisma.refreshToken.deleteMany({
             where: { token: refreshToken },
         });
 
-        return res.status(200).json({ message: "Logged out successfully" });
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+        });
+
+        return res.status(200).json({ message: 'Logged out successfully' });
     } catch (err) {
         logger.error(err);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-export const refreshToken = async (req: AuthRequest, res: Response) => {
+export const refreshToken = async (req: Request, res: Response) => {
     try {
-        const { user } = req;
-        const userId = typeof user === 'object' && user !== null && 'userId' in user ? user.userId as string : undefined;
+        const { refreshToken } = req.cookies;
 
-        if (!userId) {
-            return res.status(403).json({ message: 'Forbidden: Invalid user data in token' });
+        if (!refreshToken) {
+            return res.status(401).json({ message: 'Refresh token not found' });
         }
-        
-        const accessToken = generateAccessToken(userId);
+
+        const refreshTokenDoc = await prisma.refreshToken.findUnique({
+            where: { token: refreshToken },
+            include: { user: true },
+        });
+
+        if (!refreshTokenDoc || refreshTokenDoc.expiresAt < new Date()) {
+            return res.status(403).json({ message: 'Invalid or expired refresh token' });
+        }
+
+        const accessToken = generateAccessToken(refreshTokenDoc.userId);
 
         return res.status(200).json({
-            message: "Access token refreshed successfully",
+            message: 'Access token refreshed successfully',
             accessToken,
         });
 
     } catch (err) {
         logger.error(err);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };

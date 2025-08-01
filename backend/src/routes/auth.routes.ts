@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { register, login, logout, refreshToken } from '../controllers/auth.controller';
 import { validate } from '../middleware/validation.middleware';
 import { AuthSchema } from '../utils/auth.validator';
-import { refreshTokenMiddleware } from '../middleware/auth.middleware';
+import { authenticateRefreshToken } from '../middleware/refresh-token.middleware';
 
 const router = Router();
 
@@ -55,27 +55,14 @@ router.post('/login', validate(AuthSchema), login);
  *     summary: User logout
  *     tags: [Auth]
  *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - refreshToken
- *             properties:
- *               refreshToken:
- *                 type: string
+ *       - cookieAuth: []
  *     responses:
  *       200:
  *         description: Logged out successfully
- *       400:
- *         description: Refresh token is required
  *       401:
  *         description: Unauthorized
  */
-router.post('/logout', refreshTokenMiddleware, logout);
+router.post('/logout', authenticateRefreshToken, logout);
 
 /**
  * @openapi
@@ -102,6 +89,6 @@ router.post('/logout', refreshTokenMiddleware, logout);
  *       403:
  *         description: Invalid or expired refresh token
  */
-router.post('/refresh-token', refreshTokenMiddleware, refreshToken);
+router.post('/refresh-token', authenticateRefreshToken, refreshToken);
 
 export default router;
