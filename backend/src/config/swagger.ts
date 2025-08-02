@@ -33,6 +33,37 @@ const swaggerDefinition = {
           },
         },
       },
+      CreateProjectInput: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: {
+            type: 'string',
+            description: 'The name of the project',
+            example: 'New Website Launch',
+          },
+          description: {
+            type: 'string',
+            description: 'A brief description of the project',
+            example: 'This project is for the new company website.',
+          },
+        },
+      },
+      UpdateProjectInput: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'The name of the project',
+            example: 'New Website Launch V2',
+          },
+          description: {
+            type: 'string',
+            description: 'A brief description of the project',
+            example: 'This project is for the new company website, with new features.',
+          },
+        },
+      },
     },
     securitySchemes: {
       bearerAuth: {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { register, login, logout, refreshToken } from '../controllers/auth.controller';
 import { validate } from '../middleware/validation.middleware';
-import { AuthSchema } from '../utils/auth.validator';
+import { AuthSchema } from '../validators/auth.validator';
 import { authenticateRefreshToken } from '../middleware/refresh-token.middleware';
 
 const router = Router();

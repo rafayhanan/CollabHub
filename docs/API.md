@@ -129,6 +129,91 @@ Authorization: Bearer <access-token>
 
 ---
 
+### 5. Create Project
+**POST** `/projects`
+
+**Purpose:** Create a new project
+
+**Auth Required:** ✅ Yes
+
+**Request Body:**
+```json
+{
+  "name": "New Website Launch",
+  "description": "This project is for the new company website."
+}
+```
+
+**Response:**
+```json
+{
+  "id": "clh1234567890",
+  "name": "New Website Launch",
+  "description": "This project is for the new company website.",
+  "createdAt": "2023-10-27T10:00:00.000Z",
+  "updatedAt": "2023-10-27T10:00:00.000Z"
+}
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `400`: Invalid input data
+
+---
+
+### 6. Update Project
+**PUT** `/projects/{id}`
+
+**Purpose:** Update an existing project
+
+**Auth Required:** ✅ Yes
+
+**Request Body:**
+```json
+{
+  "name": "Updated Project Name",
+  "description": "Updated project description."
+}
+```
+
+**Response:**
+```json
+{
+  "id": "clh1234567890",
+  "name": "Updated Project Name",
+  "description": "Updated project description.",
+  "createdAt": "2023-10-27T10:00:00.000Z",
+  "updatedAt": "2023-10-27T10:00:00.000Z"
+}
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (not the owner)
+- `404`: Project not found
+- `400`: Invalid input data
+
+---
+
+### 7. Delete Project
+**DELETE** `/projects/{id}`
+
+**Purpose:** Delete an existing project
+
+**Auth Required:** ✅ Yes
+
+**Request Body:** ❌ None required
+
+**Response:**
+- `204`: No Content (Project deleted successfully)
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (not the owner)
+- `404`: Project not found
+
+---
+
 ## Testing Examples
 
 ### Using cURL
@@ -165,7 +250,7 @@ curl -X POST http://localhost:3000/api/auth/logout \
 - **Auth endpoints:** 10 requests per 15 minutes per IP
 
 ## Security Features
-- Passwords are hashed using bcrypt
+- Passwords are hashed using Argon2
 - JWT tokens for stateless authentication
 - HTTP-only cookies for refresh tokens
 - Rate limiting and security headers via Helmet
