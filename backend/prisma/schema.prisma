@@ -15,24 +15,27 @@ enum Role {
 }
 
 model User {
-  id             String         @id @default(uuid())
-  email          String         @unique
-  password       String
-  name           String?
-  bio            String?
-  avatarUrl      String?
-  projects       UserProject[]
-  refreshTokens  RefreshToken[]
-  createdAt      DateTime       @default(now())
+  id              String         @id @default(uuid())
+  email           String         @unique
+  password        String
+  name            String?
+  bio             String?
+  avatarUrl       String?
+  projects        UserProject[]
+  refreshTokens   RefreshToken[]
+  sentInvitations Invitation[]   @relation("SentInvitations")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime?       @updatedAt
 }
 
 model Project {
-  id          String      @id @default(uuid())
+  id          String       @id @default(uuid())
   name        String
   description String?
   members     UserProject[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  invitations Invitation[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model UserProject {
@@ -47,6 +50,25 @@ model UserProject {
   @@id([userId, projectId])
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Invitation {
+  id               String           @id @default(uuid())
+  project          Project          @relation(fields: [projectId], references: [id])
+  projectId        String
+  invitedBy        User             @relation("SentInvitations", fields: [invitedById], references: [id])
+  invitedById      String
+  invitedUserEmail String
+  status           InvitationStatus @default(PENDING)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+
 model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique
@@ -54,4 +76,4 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   expiresAt DateTime
-} 
+}

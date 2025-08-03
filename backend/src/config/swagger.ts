@@ -64,6 +64,18 @@ const swaggerDefinition = {
           },
         },
       },
+      SendInvitationInput: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: {
+            type: 'string',
+            format: 'email',
+            description: 'Email address of the user to invite',
+            example: 'user@example.com',
+          },
+        },
+      },
     },
     securitySchemes: {
       bearerAuth: {

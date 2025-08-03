@@ -7,6 +7,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
 import projectRoutes from './routes/project.routes';
+import invitationRoutes from './routes/invitation.routes';
 import { setupSwagger } from './config/swagger';
 import logger from './utils/logger';
 import { errorHandler } from './middleware/error.middleware';
@@ -41,6 +42,7 @@ setupSwagger(app);
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/projects', authLimiter, projectRoutes);
+app.use('/api', authLimiter, invitationRoutes);
 
 // Centralized error handler
 app.use(errorHandler);

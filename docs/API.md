@@ -214,6 +214,88 @@ Authorization: Bearer <access-token>
 
 ---
 
+### 8. Send Invitation
+**POST** `/projects/{projectId}/invitations`
+
+**Purpose:** Send an invitation to a user to join a project
+
+**Auth Required:** ✅ Yes
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "clh1234567890",
+  "projectId": "clh1234567890",
+  "invitedById": "clh1234567890",
+  "invitedUserEmail": "user@example.com",
+  "status": "PENDING",
+  "createdAt": "2023-10-27T10:00:00.000Z",
+  "updatedAt": "2023-10-27T10:00:00.000Z"
+}
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (not the owner)
+- `404`: Project not found
+- `409`: User is already a member of this project
+- `400`: Invalid input data
+
+---
+
+### 9. Accept Invitation
+**GET** `/invitations/{invitationId}/accept`
+
+**Purpose:** Accept an invitation to join a project
+
+**Auth Required:** ✅ Yes
+
+**Request Body:** ❌ None required
+
+**Response:**
+```json
+{
+  "message": "Invitation accepted successfully"
+}
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (invitation not for you)
+- `404`: Invitation not found or already handled
+
+---
+
+### 10. Decline Invitation
+**GET** `/invitations/{invitationId}/decline`
+
+**Purpose:** Decline an invitation to join a project
+
+**Auth Required:** ✅ Yes
+
+**Request Body:** ❌ None required
+
+**Response:**
+```json
+{
+  "message": "Invitation declined successfully"
+}
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (invitation not for you)
+- `404`: Invitation not found or already handled
+
+---
+
 ## Testing Examples
 
 ### Using cURL
