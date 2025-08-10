@@ -54,12 +54,10 @@ export const sendInvitation = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        const invitingUser = await prisma.userProject.findUnique({
+        const invitingUser = await prisma.userProject.findFirst({
             where: {
-                userId_projectId: {
-                    userId: invitedById,
-                    projectId,
-                },
+                userId: invitedById,
+                projectId,
                 role: 'OWNER',
             },
         });

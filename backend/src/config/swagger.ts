@@ -76,6 +76,49 @@ const swaggerDefinition = {
           },
         },
       },
+      CreateTaskInput: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title: {
+            type: 'string',
+            description: 'The title of the task',
+            example: 'Design the homepage',
+          },
+          description: {
+            type: 'string',
+            description: 'A detailed description of the task',
+            example: 'Create a wireframe and a high-fidelity mockup.',
+          },
+          status: {
+            type: 'string',
+            enum: ['TODO', 'IN_PROGRESS', 'DONE'],
+            description: 'The current status of the task',
+            example: 'TODO',
+          },
+          dueDate: {
+            type: 'string',
+            format: 'date-time',
+            description: 'The optional due date for the task',
+            example: '2024-12-31T23:59:59.000Z',
+          },
+          assignments: {
+            type: 'array',
+            description: 'Optional at-creation assignments (owner only).',
+            items: {
+              type: 'object',
+              required: ['userId'],
+              properties: {
+                userId: { type: 'string', format: 'uuid' },
+                note: { type: 'string', description: 'Optional per-assignee description' },
+              },
+            },
+            example: [
+              { userId: '3fa85f64-5717-4562-b3fc-2c963f66afa6', note: 'Implement hero section' },
+            ],
+          },
+        },
+      },
     },
     securitySchemes: {
       bearerAuth: {

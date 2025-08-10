@@ -101,12 +101,10 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        const userProject = await prisma.userProject.findUnique({
+        const userProject = await prisma.userProject.findFirst({
             where: {
-                userId_projectId: {
-                    userId,
-                    projectId: id,
-                },
+                userId,
+                projectId: id,
                 role: 'OWNER',
             },
         });

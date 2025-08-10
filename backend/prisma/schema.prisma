@@ -24,8 +24,9 @@ model User {
   projects        UserProject[]
   refreshTokens   RefreshToken[]
   sentInvitations Invitation[]   @relation("SentInvitations")
+  taskAssignments TaskAssignment[] // Changed from assignedTasks
   createdAt       DateTime       @default(now())
-  updatedAt       DateTime?       @updatedAt
+  updatedAt       DateTime       @updatedAt
 }
 
 model Project {
@@ -34,14 +35,15 @@ model Project {
   description String?
   members     UserProject[]
   invitations Invitation[]
+  tasks       Task[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
 
 model UserProject {
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId String
   role      Role
   createdAt DateTime @default(now())
@@ -58,9 +60,9 @@ enum InvitationStatus {
 
 model Invitation {
   id               String           @id @default(uuid())
-  project          Project          @relation(fields: [projectId], references: [id])
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId        String
-  invitedBy        User             @relation("SentInvitations", fields: [invitedById], references: [id])
+  invitedBy        User             @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
   invitedById      String
   invitedUserEmail String
   status           InvitationStatus @default(PENDING)
@@ -68,12 +70,44 @@ model Invitation {
   updatedAt        DateTime         @updatedAt
 }
 
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  dueDate     DateTime?
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  assignments TaskAssignment[] // Changed from assignee
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskAssignment {
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  note      String?
+  assignedAt DateTime @default(now())
+
+  @@id([taskId, userId])
+}
 
 model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   expiresAt DateTime
 }
