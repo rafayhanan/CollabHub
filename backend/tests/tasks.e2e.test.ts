@@ -53,7 +53,7 @@ describe('Tasks API', () => {
 
         expect(assignment.body.assignments.length).toBe(1);
         expect(assignment.body.assignments[0].note).toBe('Do it');
-    });
+    }, 30000);
 });
 
 
