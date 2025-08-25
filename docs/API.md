@@ -296,6 +296,223 @@ Authorization: Bearer <access-token>
 
 ---
 
+### 11. Get Project Tasks
+**GET** `/projects/{projectId}/tasks`
+
+**Purpose:** Get all tasks for a specific project
+
+**Auth Required:** ✅ Yes
+
+**Request Body:** ❌ None required
+
+**Response:**
+```json
+[
+  {
+    "id": "clh1234567890",
+    "title": "Create user authentication",
+    "description": "Implement JWT-based authentication system",
+    "status": "IN_PROGRESS",
+    "dueDate": "2023-11-15T00:00:00.000Z",
+    "projectId": "clh1234567890",
+    "assignments": [
+      {
+        "user": {
+          "id": "clh1234567890",
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "note": "Lead developer for this task"
+      }
+    ],
+    "createdAt": "2023-10-27T10:00:00.000Z",
+    "updatedAt": "2023-10-27T10:00:00.000Z"
+  }
+]
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (not a project member)
+- `404`: Project not found
+
+---
+
+### 12. Get Task by ID
+**GET** `/tasks/{taskId}`
+
+**Purpose:** Get a specific task by its ID
+
+**Auth Required:** ✅ Yes
+
+**Request Body:** ❌ None required
+
+**Response:**
+```json
+{
+  "id": "clh1234567890",
+  "title": "Create user authentication",
+  "description": "Implement JWT-based authentication system",
+  "status": "IN_PROGRESS",
+  "dueDate": "2023-11-15T00:00:00.000Z",
+  "projectId": "clh1234567890",
+  "project": {
+    "id": "clh1234567890",
+    "name": "Website Project"
+  },
+  "assignments": [
+    {
+      "user": {
+        "id": "clh1234567890",
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "note": "Lead developer for this task"
+    }
+  ],
+  "createdAt": "2023-10-27T10:00:00.000Z",
+  "updatedAt": "2023-10-27T10:00:00.000Z"
+}
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (not a project member)
+- `404`: Task not found
+
+---
+
+### 13. Update Task
+**PUT** `/tasks/{taskId}`
+
+**Purpose:** Update an existing task
+
+**Auth Required:** ✅ Yes
+
+**Request Body:**
+```json
+{
+  "title": "Updated task title",
+  "description": "Updated task description",
+  "status": "DONE",
+  "dueDate": "2023-11-20T00:00:00.000Z"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "clh1234567890",
+  "title": "Updated task title",
+  "description": "Updated task description",
+  "status": "DONE",
+  "dueDate": "2023-11-20T00:00:00.000Z",
+  "projectId": "clh1234567890",
+  "assignments": [
+    {
+      "user": {
+        "id": "clh1234567890",
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "note": "Lead developer for this task"
+    }
+  ],
+  "createdAt": "2023-10-27T10:00:00.000Z",
+  "updatedAt": "2023-10-27T15:30:00.000Z"
+}
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (not a project member)
+- `404`: Task not found
+- `400`: Invalid input data
+
+---
+
+### 14. Delete Task
+**DELETE** `/tasks/{taskId}`
+
+**Purpose:** Delete an existing task (owner only)
+
+**Auth Required:** ✅ Yes
+
+**Request Body:** ❌ None required
+
+**Response:**
+- `204`: No Content (Task deleted successfully)
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (only project owners can delete tasks)
+- `404`: Task not found
+
+---
+
+### 15. Get User's Assigned Tasks
+**GET** `/users/me/tasks`
+
+**Purpose:** Get all tasks assigned to the current user
+
+**Auth Required:** ✅ Yes
+
+**Request Body:** ❌ None required
+
+**Response:**
+```json
+[
+  {
+    "id": "clh1234567890",
+    "title": "Create user authentication",
+    "description": "Implement JWT-based authentication system",
+    "status": "IN_PROGRESS",
+    "dueDate": "2023-11-15T00:00:00.000Z",
+    "projectId": "clh1234567890",
+    "project": {
+      "id": "clh1234567890",
+      "name": "Website Project"
+    },
+    "assignments": [
+      {
+        "note": "Lead developer for this task",
+        "assignedAt": "2023-10-27T10:00:00.000Z"
+      }
+    ],
+    "createdAt": "2023-10-27T10:00:00.000Z",
+    "updatedAt": "2023-10-27T10:00:00.000Z"
+  }
+]
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+
+---
+
+### 16. Unassign User from Task
+**DELETE** `/tasks/{taskId}/assignments/{userId}`
+
+**Purpose:** Remove a user's assignment from a task (owner only)
+
+**Auth Required:** ✅ Yes
+
+**Request Body:** ❌ None required
+
+**Response:**
+```json
+{
+  "message": "User unassigned from task successfully"
+}
+```
+
+**Error Responses:**
+- `401`: Unauthorized
+- `403`: Forbidden (only project owners can unassign users)
+- `404`: Task or assignment not found
+
+---
+
 ## Testing Examples
 
 ### Using cURL

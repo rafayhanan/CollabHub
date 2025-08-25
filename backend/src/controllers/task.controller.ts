@@ -157,3 +157,263 @@ export const assignTask = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ error: 'Internal server error while assigning the task.' });
     }
 };
+
+export const getTasks = async (req: AuthRequest, res: Response) => {
+    const { projectId } = req.params;
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        // Check if user is a member of the project
+        const member = await prisma.userProject.findUnique({
+            where: {
+                userId_projectId: { userId, projectId },
+            },
+        });
+
+        if (!member) {
+            return res.status(403).json({ message: 'Forbidden: You are not a member of this project.' });
+        }
+
+        const tasks = await prisma.task.findMany({
+            where: { projectId },
+            include: {
+                assignments: {
+                    select: {
+                        user: {
+                            select: { id: true, name: true, email: true }
+                        },
+                        note: true,
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        res.json(tasks);
+    } catch (error) {
+        logger.error('Error fetching tasks:', error);
+        res.status(500).json({ error: 'Internal server error while fetching tasks.' });
+    }
+};
+
+export const getTaskById = async (req: AuthRequest, res: Response) => {
+    const { taskId } = req.params;
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        const task = await prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                assignments: {
+                    select: {
+                        user: {
+                            select: { id: true, name: true, email: true }
+                        },
+                        note: true,
+                    }
+                },
+                project: {
+                    select: { id: true, name: true }
+                }
+            },
+        });
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Check if user is a member of the project
+        const member = await prisma.userProject.findUnique({
+            where: {
+                userId_projectId: { userId, projectId: task.projectId },
+            },
+        });
+
+        if (!member) {
+            return res.status(403).json({ message: 'Forbidden: You are not a member of this project.' });
+        }
+
+        res.json(task);
+    } catch (error) {
+        logger.error('Error fetching task by ID:', error);
+        res.status(500).json({ error: 'Internal server error while fetching task.' });
+    }
+};
+
+export const updateTask = async (req: AuthRequest, res: Response) => {
+    const { taskId } = req.params;
+    const { title, description, status, dueDate } = req.body;
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        const task = await prisma.task.findUnique({ where: { id: taskId } });
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Check if user is a member of the project
+        const member = await prisma.userProject.findUnique({
+            where: {
+                userId_projectId: { userId, projectId: task.projectId },
+            },
+        });
+
+        if (!member) {
+            return res.status(403).json({ message: 'Forbidden: You are not a member of this project.' });
+        }
+
+        const updateData: any = {};
+        if (title !== undefined) updateData.title = title;
+        if (description !== undefined) updateData.description = description;
+        if (status !== undefined) updateData.status = status;
+        if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
+
+        const updatedTask = await prisma.task.update({
+            where: { id: taskId },
+            data: updateData,
+            include: {
+                assignments: {
+                    select: {
+                        user: {
+                            select: { id: true, name: true, email: true }
+                        },
+                        note: true,
+                    }
+                }
+            },
+        });
+
+        res.json(updatedTask);
+    } catch (error) {
+        logger.error('Error updating task:', error);
+        res.status(500).json({ error: 'Internal server error while updating task.' });
+    }
+};
+
+export const deleteTask = async (req: AuthRequest, res: Response) => {
+    const { taskId } = req.params;
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        const task = await prisma.task.findUnique({ where: { id: taskId } });
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Only project owner can delete tasks
+        const ownerRecord = await prisma.userProject.findFirst({
+            where: {
+                userId,
+                projectId: task.projectId,
+                role: 'OWNER',
+            },
+        });
+
+        if (!ownerRecord) {
+            return res.status(403).json({ message: 'Forbidden: Only the project owner can delete tasks.' });
+        }
+
+        // Check if task still exists before deletion (in case of concurrent operations)
+        const taskExists = await prisma.task.findUnique({ where: { id: taskId } });
+        if (!taskExists) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        await prisma.task.delete({
+            where: { id: taskId },
+        });
+
+        res.status(204).send();
+    } catch (error) {
+        logger.error('Error deleting task:', error);
+        res.status(500).json({ error: 'Internal server error while deleting task.' });
+    }
+};
+
+export const getUserTasks = async (req: AuthRequest, res: Response) => {
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        const tasks = await prisma.task.findMany({
+            where: {
+                assignments: {
+                    some: {
+                        userId,
+                    },
+                },
+            },
+            include: {
+                project: {
+                    select: { id: true, name: true }
+                },
+                assignments: {
+                    where: { userId },
+                    select: {
+                        note: true,
+                        assignedAt: true,
+                    }
+                }
+            },
+            orderBy: {
+                dueDate: 'asc',
+            },
+        });
+
+        res.json(tasks);
+    } catch (error) {
+        logger.error('Error fetching user tasks:', error);
+        res.status(500).json({ error: 'Internal server error while fetching user tasks.' });
+    }
+};
+
+export const unassignTask = async (req: AuthRequest, res: Response) => {
+    const { taskId, userId: targetUserId } = req.params;
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        const task = await prisma.task.findUnique({ where: { id: taskId } });
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Only project owner can unassign users
+        const ownerRecord = await prisma.userProject.findFirst({
+            where: {
+                userId,
+                projectId: task.projectId,
+                role: 'OWNER',
+            },
+        });
+
+        if (!ownerRecord) {
+            return res.status(403).json({ message: 'Forbidden: Only the project owner can unassign users from tasks.' });
+        }
+
+        // Check if the assignment exists
+        const assignment = await prisma.taskAssignment.findUnique({
+            where: {
+                taskId_userId: { taskId, userId: targetUserId },
+            },
+        });
+
+        if (!assignment) {
+            return res.status(404).json({ message: 'Assignment not found' });
+        }
+
+        await prisma.taskAssignment.delete({
+            where: {
+                taskId_userId: { taskId, userId: targetUserId },
+            },
+        });
+
+        res.json({ message: 'User unassigned from task successfully' });
+    } catch (error) {
+        logger.error('Error unassigning task:', error);
+        res.status(500).json({ error: 'Internal server error while unassigning task.' });
+    }
+};
