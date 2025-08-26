@@ -15,18 +15,20 @@ enum Role {
 }
 
 model User {
-  id              String         @id @default(uuid())
-  email           String         @unique
+  id              String           @id @default(uuid())
+  email           String           @unique
   password        String
   name            String?
   bio             String?
   avatarUrl       String?
   projects        UserProject[]
   refreshTokens   RefreshToken[]
-  sentInvitations Invitation[]   @relation("SentInvitations")
-  taskAssignments TaskAssignment[] // Changed from assignedTasks
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  sentInvitations Invitation[]     @relation("SentInvitations")
+  taskAssignments TaskAssignment[]
+  channelMembers  ChannelMember[]
+  messages        Message[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model Project {
@@ -36,6 +38,7 @@ model Project {
   members     UserProject[]
   invitations Invitation[]
   tasks       Task[]
+  channels    Channel[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -87,6 +90,7 @@ model Task {
   projectId String
 
   assignments TaskAssignment[] // Changed from assignee
+  channels    Channel[] // Add relation to channels
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -110,4 +114,48 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   expiresAt DateTime
+}
+
+enum ChannelType {
+  PROJECT_GENERAL
+  TASK_SPECIFIC
+  PRIVATE_DM
+  ANNOUNCEMENTS
+}
+
+model Channel {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  type        ChannelType   @default(PROJECT_GENERAL)
+  projectId   String?
+  taskId      String?
+  project     Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task        Task?         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  members     ChannelMember[]
+  messages    Message[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model ChannelMember {
+  channelId String
+  userId    String
+  role      String    @default("MEMBER") // "ADMIN", "MEMBER"
+  joinedAt  DateTime  @default(now())
+  channel   Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@id([channelId, userId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  channelId String
+  authorId  String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

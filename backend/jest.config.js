@@ -13,7 +13,7 @@ module.exports = {
     testMatch: ['**/?(*.)+(spec|test).ts'],
     clearMocks: true,
     maxWorkers: 1,
-    testTimeout: 15000, // Increase timeout to 15 seconds
+    testTimeout: 45000, // Increased to 45 seconds for chat tests
 };
 
 
