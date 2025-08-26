@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.routes';
 import projectRoutes from './routes/project.routes';
 import invitationRoutes from './routes/invitation.routes';
 import taskRoutes from './routes/task.routes';
+import chatRoutes from './routes/chat.routes';
 import { setupSwagger } from './config/swagger';
 import { errorHandler } from './middleware/error.middleware';
 
@@ -50,6 +51,7 @@ app.use('/api/auth', !isTest ? authLimiter : (_req, _res, next) => next(), authR
 app.use('/api/projects', projectRoutes);
 app.use('/api', invitationRoutes);
 app.use('/api', taskRoutes);
+app.use('/api/channels', chatRoutes);
 
 // Error handler
 app.use(errorHandler);

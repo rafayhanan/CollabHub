@@ -1,8 +1,7 @@
-import { execSync } from 'node:child_process';
-
 export default async function globalSetup() {
-    // Pre-generate Prisma client once to avoid concurrent generate in tests
-    execSync('npx prisma generate', { stdio: 'inherit' });
+    console.log('Setting up test environment...');
+    // Note: Run "npx prisma generate" manually after schema changes
+    // before running tests to ensure the client is up to date
 }
 
 

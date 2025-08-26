@@ -597,6 +597,411 @@ curl -X POST http://localhost:3000/api/auth/logout \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
+---
+
+## 🗣️ Chat System API
+
+The Chat System provides real-time communication capabilities within projects and tasks. It supports multiple channel types and role-based access control.
+
+### Channel Types
+
+- **PROJECT_GENERAL**: General project discussion
+- **TASK_SPECIFIC**: Task-focused discussions
+- **PRIVATE_DM**: Direct messages between users
+- **ANNOUNCEMENTS**: Project announcements
+
+### Channel Roles
+
+- **ADMIN**: Can manage channel members and settings
+- **MEMBER**: Can participate in discussions
+
+---
+
+### 1. Create Channel
+
+**POST** `/channels`
+
+**Purpose:** Create a new communication channel
+
+**Auth Required:** ✅ Yes
+
+**Request Body:**
+
+```json
+{
+  "name": "General Discussion",
+  "type": "PROJECT_GENERAL",
+  "description": "Main project communication channel",
+  "projectId": "clh1234567890",
+  "taskId": "clh0987654321"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "clh1111111111",
+  "name": "General Discussion",
+  "type": "PROJECT_GENERAL",
+  "description": "Main project communication channel",
+  "projectId": "clh1234567890",
+  "taskId": null,
+  "members": [
+    {
+      "channelId": "clh1111111111",
+      "userId": "clh2222222222",
+      "role": "ADMIN",
+      "joinedAt": "2023-10-27T10:00:00.000Z",
+      "user": {
+        "id": "clh2222222222",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "avatarUrl": null
+      }
+    }
+  ],
+  "project": {
+    "id": "clh1234567890",
+    "name": "New Website Launch"
+  },
+  "createdAt": "2023-10-27T10:00:00.000Z",
+  "updatedAt": "2023-10-27T10:00:00.000Z"
+}
+```
+
+**Error Responses:**
+
+- `400`: Invalid input data (missing required fields)
+- `403`: Access denied to project
+- `404`: Task not found in project (for task-specific channels)
+
+---
+
+### 2. Get Project Channels
+
+**GET** `/channels/project/{projectId}`
+
+**Purpose:** Retrieve all channels for a project
+
+**Auth Required:** ✅ Yes
+
+**Response:**
+
+```json
+[
+  {
+    "id": "clh1111111111",
+    "name": "General Discussion",
+    "type": "PROJECT_GENERAL",
+    "description": "Main project communication",
+    "members": [
+      {
+        "userId": "clh2222222222",
+        "role": "ADMIN",
+        "user": {
+          "id": "clh2222222222",
+          "name": "John Doe",
+          "email": "john@example.com"
+        }
+      }
+    ],
+    "task": null,
+    "_count": {
+      "messages": 15
+    },
+    "createdAt": "2023-10-27T10:00:00.000Z"
+  }
+]
+```
+
+**Error Responses:**
+
+- `403`: Access denied to project
+
+---
+
+### 3. Get Channel Details
+
+**GET** `/channels/{channelId}`
+
+**Purpose:** Get detailed information about a specific channel
+
+**Auth Required:** ✅ Yes
+
+**Response:**
+
+```json
+{
+  "id": "clh1111111111",
+  "name": "Task Discussion",
+  "type": "TASK_SPECIFIC",
+  "description": null,
+  "members": [
+    {
+      "userId": "clh2222222222",
+      "role": "ADMIN",
+      "user": {
+        "id": "clh2222222222",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "avatarUrl": null
+      }
+    }
+  ],
+  "project": {
+    "id": "clh1234567890",
+    "name": "New Website Launch"
+  },
+  "task": {
+    "id": "clh0987654321",
+    "title": "Design Homepage",
+    "status": "IN_PROGRESS"
+  },
+  "_count": {
+    "messages": 8
+  },
+  "createdAt": "2023-10-27T10:00:00.000Z"
+}
+```
+
+**Error Responses:**
+
+- `404`: Channel not found or access denied
+
+---
+
+### 4. Add Channel Member
+
+**POST** `/channels/{channelId}/members`
+
+**Purpose:** Add a user to a channel
+
+**Auth Required:** ✅ Yes (Channel admin only)
+
+**Request Body:**
+
+```json
+{
+  "userId": "clh3333333333",
+  "role": "MEMBER"
+}
+```
+
+**Response:**
+
+```json
+{
+  "channelId": "clh1111111111",
+  "userId": "clh3333333333",
+  "role": "MEMBER",
+  "joinedAt": "2023-10-27T10:30:00.000Z",
+  "user": {
+    "id": "clh3333333333",
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "avatarUrl": null
+  }
+}
+```
+
+**Error Responses:**
+
+- `403`: Only channel admins can add members, or user not in project
+- `404`: Channel not found
+
+---
+
+### 5. Send Message
+
+**POST** `/channels/{channelId}/messages`
+
+**Purpose:** Send a message to a channel
+
+**Auth Required:** ✅ Yes (Channel member)
+
+**Request Body:**
+
+```json
+{
+  "content": "Hello everyone! Let's discuss the homepage design."
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "clh4444444444",
+  "content": "Hello everyone! Let's discuss the homepage design.",
+  "channelId": "clh1111111111",
+  "authorId": "clh2222222222",
+  "author": {
+    "id": "clh2222222222",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "avatarUrl": null
+  },
+  "channel": {
+    "id": "clh1111111111",
+    "name": "Task Discussion",
+    "type": "TASK_SPECIFIC"
+  },
+  "createdAt": "2023-10-27T11:00:00.000Z",
+  "updatedAt": "2023-10-27T11:00:00.000Z"
+}
+```
+
+**Error Responses:**
+
+- `400`: Invalid content (empty or too long)
+- `403`: Not a member of this channel
+
+---
+
+### 6. Get Channel Messages
+
+**GET** `/channels/{channelId}/messages?limit=50&offset=0`
+
+**Purpose:** Retrieve messages from a channel with pagination
+
+**Auth Required:** ✅ Yes (Channel member)
+
+**Query Parameters:**
+
+- `limit` (optional): Number of messages to fetch (1-100, default: 50)
+- `offset` (optional): Number of messages to skip (default: 0)
+
+**Response:**
+
+```json
+[
+  {
+    "id": "clh4444444444",
+    "content": "Hello everyone! Let's discuss the homepage design.",
+    "channelId": "clh1111111111",
+    "authorId": "clh2222222222",
+    "author": {
+      "id": "clh2222222222",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "avatarUrl": null
+    },
+    "createdAt": "2023-10-27T11:00:00.000Z",
+    "updatedAt": "2023-10-27T11:00:00.000Z"
+  },
+  {
+    "id": "clh5555555555",
+    "content": "Great idea! I'll start working on the mockups.",
+    "channelId": "clh1111111111",
+    "authorId": "clh3333333333",
+    "author": {
+      "id": "clh3333333333",
+      "name": "Jane Smith",
+      "email": "jane@example.com"
+    },
+    "createdAt": "2023-10-27T11:05:00.000Z",
+    "updatedAt": "2023-10-27T11:05:00.000Z"
+  }
+]
+```
+
+**Error Responses:**
+
+- `403`: Not a member of this channel
+
+---
+
+### 7. Update Message
+
+**PUT** `/channels/messages/{messageId}`
+
+**Purpose:** Edit a message (author only)
+
+**Auth Required:** ✅ Yes (Message author)
+
+**Request Body:**
+
+```json
+{
+  "content": "Hello everyone! Let's discuss the homepage design. (Updated)"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "clh4444444444",
+  "content": "Hello everyone! Let's discuss the homepage design. (Updated)",
+  "channelId": "clh1111111111",
+  "authorId": "clh2222222222",
+  "author": {
+    "id": "clh2222222222",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "avatarUrl": null
+  },
+  "channel": {
+    "id": "clh1111111111",
+    "name": "Task Discussion",
+    "type": "TASK_SPECIFIC"
+  },
+  "createdAt": "2023-10-27T11:00:00.000Z",
+  "updatedAt": "2023-10-27T11:30:00.000Z"
+}
+```
+
+**Error Responses:**
+
+- `400`: Invalid content
+- `404`: Message not found or access denied
+
+---
+
+### 8. Delete Message
+
+**DELETE** `/channels/messages/{messageId}`
+
+**Purpose:** Delete a message (author or channel admin)
+
+**Auth Required:** ✅ Yes (Message author or channel admin)
+
+**Response:** 
+
+```
+Status: 204 No Content
+```
+
+**Error Responses:**
+
+- `403`: Access denied (only author or channel admin can delete)
+- `404`: Message not found
+
+---
+
+## 🔐 Security & Authorization
+
+### Authentication
+- All endpoints require valid JWT access tokens except registration/login
+- Tokens expire after 15 minutes, use refresh token endpoint for renewal
+
+### Project Access Control
+- Only project members can create channels in projects
+- Only project members can be added to project channels
+
+### Channel Access Control
+- Only channel admins can add/remove members
+- Only channel members can send/view messages
+- Channel creators automatically become admins
+
+### Message Permissions
+- Authors can edit their own messages
+- Authors and channel admins can delete messages
+- Message content is validated (1-2000 characters)
+
+---
+
 ### Using Swagger UI
 
 1. Navigate to `http://localhost:3000/api-docs`
