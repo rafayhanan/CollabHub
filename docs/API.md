@@ -967,7 +967,7 @@ The Chat System provides real-time communication capabilities within projects an
 
 **Auth Required:** ✅ Yes (Message author or channel admin)
 
-**Response:** 
+**Response:**
 
 ```
 Status: 204 No Content
@@ -983,19 +983,23 @@ Status: 204 No Content
 ## 🔐 Security & Authorization
 
 ### Authentication
+
 - All endpoints require valid JWT access tokens except registration/login
 - Tokens expire after 15 minutes, use refresh token endpoint for renewal
 
 ### Project Access Control
+
 - Only project members can create channels in projects
 - Only project members can be added to project channels
 
 ### Channel Access Control
+
 - Only channel admins can add/remove members
 - Only channel members can send/view messages
 - Channel creators automatically become admins
 
 ### Message Permissions
+
 - Authors can edit their own messages
 - Authors and channel admins can delete messages
 - Message content is validated (1-2000 characters)

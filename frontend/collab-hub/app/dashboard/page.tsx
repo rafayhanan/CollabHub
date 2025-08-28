@@ -1,0 +1,263 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
+import { Sidebar } from "@/components/dashboard/sidebar"
+import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { ProjectCard } from "@/components/dashboard/project-card"
+import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { getProjects, createProject, deleteProject, getUserTasks, type Project, type Task } from "@/lib/api"
+import { Plus, CheckSquare, Clock, AlertCircle, TrendingUp } from "lucide-react"
+
+export default function DashboardPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const router = useRouter()
+  const [projects, setProjects] = useState<Project[]>([])
+  const [userTasks, setUserTasks] = useState<Task[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login")
+      return
+    }
+
+    if (isAuthenticated) {
+      loadDashboardData()
+    }
+  }, [isAuthenticated, authLoading, router])
+
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true)
+      const [projectsData, tasksData] = await Promise.all([getProjects(), getUserTasks()])
+      setProjects(projectsData)
+      setUserTasks(tasksData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load dashboard data")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCreateProject = async (name: string, description: string) => {
+    const newProject = await createProject(name, description)
+    setProjects((prev) => [newProject, ...prev])
+  }
+
+  const handleDeleteProject = async (project: Project) => {
+    if (confirm(`Are you sure you want to delete "${project.name}"?`)) {
+      await deleteProject(project.id)
+      setProjects((prev) => prev.filter((p) => p.id !== project.id))
+    }
+  }
+
+  const handleEditProject = (project: Project) => {
+    // TODO: Implement edit functionality
+    console.log("Edit project:", project)
+  }
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex h-screen">
+        <div className="w-64 border-r bg-sidebar">
+          <Skeleton className="h-16 w-full" />
+          <div className="p-4 space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1">
+          <Skeleton className="h-16 w-full" />
+          <div className="p-6 space-y-4">
+            <Skeleton className="h-8 w-48" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-48 w-full" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const taskStats = {
+    total: userTasks.length,
+    todo: userTasks.filter((t) => t.status === "TODO").length,
+    inProgress: userTasks.filter((t) => t.status === "IN_PROGRESS").length,
+    completed: userTasks.filter((t) => t.status === "DONE").length,
+    overdue: userTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "DONE").length,
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      <Sidebar projects={projects} onCreateProject={() => setIsCreateDialogOpen(true)} />
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardHeader onCreateProject={() => setIsCreateDialogOpen(true)} />
+
+        <main className="flex-1 overflow-auto p-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Welcome Section */}
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-balance">Welcome back!</h1>
+              <p className="text-muted-foreground text-pretty">
+                Here's what's happening with your projects and tasks today.
+              </p>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{projects.length}</div>
+                  <p className="text-xs text-muted-foreground">Active projects</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">My Tasks</CardTitle>
+                  <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{taskStats.total}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {taskStats.completed} completed, {taskStats.inProgress} in progress
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{taskStats.inProgress}</div>
+                  <p className="text-xs text-muted-foreground">Tasks being worked on</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-destructive">{taskStats.overdue}</div>
+                  <p className="text-xs text-muted-foreground">Tasks past due date</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Projects Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Your Projects</h2>
+                <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Project
+                </Button>
+              </div>
+
+              {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
+
+              {projects.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                        <Plus className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-medium">No projects yet</h3>
+                        <p className="text-muted-foreground text-pretty">
+                          Create your first project to start organizing your work and collaborating with your team.
+                        </p>
+                      </div>
+                      <Button onClick={() => setIsCreateDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Your First Project
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projects.map((project) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      onEdit={handleEditProject}
+                      onDelete={handleDeleteProject}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Tasks */}
+            {userTasks.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">Recent Tasks</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {userTasks.slice(0, 4).map((task) => (
+                    <Card key={task.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <CardTitle className="text-base text-balance">{task.title}</CardTitle>
+                          <Badge
+                            variant={
+                              task.status === "DONE"
+                                ? "default"
+                                : task.status === "IN_PROGRESS"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {task.status.replace("_", " ")}
+                          </Badge>
+                        </div>
+                        {task.description && (
+                          <CardDescription className="text-sm text-pretty">{task.description}</CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        {task.dueDate && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Due {new Date(task.dueDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+
+      <CreateProjectDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onCreateProject={handleCreateProject}
+      />
+    </div>
+  )
+}
