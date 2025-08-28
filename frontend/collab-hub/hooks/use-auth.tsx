@@ -16,13 +16,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasMounted, setHasMounted] = useState(false)
 
   useEffect(() => {
+    // Set mounted flag first to avoid hydration mismatch
+    setHasMounted(true)
+    
     // Check for existing authentication on mount
     const currentUser = getCurrentUser()
     setUser(currentUser)
     setIsLoading(false)
   }, [])
+
+  // Prevent hydration mismatch by not rendering auth-dependent content until mounted
+  if (!hasMounted) {
+    return (
+      <AuthContext.Provider 
+        value={{
+          user: null,
+          isLoading: true,
+          login: () => {},
+          logout: async () => {},
+          isAuthenticated: false,
+        }}
+      >
+        {children}
+      </AuthContext.Provider>
+    )
+  }
 
   const login = (userData: User) => {
     setUser(userData)
