@@ -111,7 +111,7 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Welcome back!</h1>
               <p className="text-muted-foreground text-pretty">
-                Here's what's happening with your projects and tasks today.
+                Here&apos;s what&apos;s happening with your projects and tasks today.
               </p>
             </div>
 

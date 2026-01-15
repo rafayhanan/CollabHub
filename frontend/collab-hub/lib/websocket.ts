@@ -1,13 +1,17 @@
 import { getToken } from "./auth"
 
+type MessagePayload = Record<string, unknown>
+type TaskPayload = Record<string, unknown>
+type UserPayload = Record<string, unknown>
+
 export type WebSocketEvent =
-  | { type: "message_created"; data: { channelId: string; message: any } }
-  | { type: "message_updated"; data: { channelId: string; message: any } }
+  | { type: "message_created"; data: { channelId: string; message: MessagePayload } }
+  | { type: "message_updated"; data: { channelId: string; message: MessagePayload } }
   | { type: "message_deleted"; data: { channelId: string; messageId: string } }
-  | { type: "task_updated"; data: { projectId: string; task: any } }
-  | { type: "task_created"; data: { projectId: string; task: any } }
+  | { type: "task_updated"; data: { projectId: string; task: TaskPayload } }
+  | { type: "task_created"; data: { projectId: string; task: TaskPayload } }
   | { type: "task_deleted"; data: { projectId: string; taskId: string } }
-  | { type: "user_joined_project"; data: { projectId: string; user: any } }
+  | { type: "user_joined_project"; data: { projectId: string; user: UserPayload } }
   | { type: "user_left_project"; data: { projectId: string; userId: string } }
   | { type: "typing_start"; data: { channelId: string; userId: string; userName: string } }
   | { type: "typing_stop"; data: { channelId: string; userId: string } }
@@ -88,7 +92,7 @@ class WebSocketManager {
     }
   }
 
-  send(event: { type: string; data: any }) {
+  send(event: { type: string; data: unknown }) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(event))
     } else {

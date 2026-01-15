@@ -40,21 +40,6 @@ export function ChannelList({
     }
   }
 
-  const getChannelTypeLabel = (type: Channel["type"]) => {
-    switch (type) {
-      case "PROJECT_GENERAL":
-        return "General"
-      case "TASK_SPECIFIC":
-        return "Task"
-      case "PRIVATE_DM":
-        return "DM"
-      case "ANNOUNCEMENTS":
-        return "Announcement"
-      default:
-        return "Channel"
-    }
-  }
-
   const groupedChannels = channels.reduce(
     (acc, channel) => {
       acc[channel.type].push(channel)
@@ -68,7 +53,7 @@ export function ChannelList({
     },
   )
 
-  const renderChannelGroup = (title: string, channels: Channel[], type: Channel["type"]) => {
+  const renderChannelGroup = (title: string, channels: Channel[]) => {
     if (channels.length === 0) return null
 
     return (
@@ -145,10 +130,10 @@ export function ChannelList({
 
       <ScrollArea className="flex-1 p-2">
         <div className="space-y-4">
-          {renderChannelGroup("Announcements", groupedChannels.ANNOUNCEMENTS, "ANNOUNCEMENTS")}
-          {renderChannelGroup("General", groupedChannels.PROJECT_GENERAL, "PROJECT_GENERAL")}
-          {renderChannelGroup("Tasks", groupedChannels.TASK_SPECIFIC, "TASK_SPECIFIC")}
-          {renderChannelGroup("Direct Messages", groupedChannels.PRIVATE_DM, "PRIVATE_DM")}
+          {renderChannelGroup("Announcements", groupedChannels.ANNOUNCEMENTS)}
+          {renderChannelGroup("General", groupedChannels.PROJECT_GENERAL)}
+          {renderChannelGroup("Tasks", groupedChannels.TASK_SPECIFIC)}
+          {renderChannelGroup("Direct Messages", groupedChannels.PRIVATE_DM)}
         </div>
 
         {channels.length === 0 && (
