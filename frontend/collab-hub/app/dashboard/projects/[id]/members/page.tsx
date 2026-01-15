@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { ProjectMembers } from "@/components/users/project-members"
-import { projectApi } from "@/lib/api"
+import { projectApi, type Project } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 
 export default function ProjectMembersPage() {
   const params = useParams()
   const { user } = useAuth()
-  const [project, setProject] = useState<any>(null)
+  const [project, setProject] = useState<Project | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {

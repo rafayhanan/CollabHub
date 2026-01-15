@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,15 +35,11 @@ export function ProjectMembers({ projectId, currentUserId, isOwner }: ProjectMem
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchMembers()
-  }, [projectId])
-
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       const project = await projectApi.getProject(projectId)
       setMembers(project.members || [])
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to fetch project members",
@@ -52,7 +48,11 @@ export function ProjectMembers({ projectId, currentUserId, isOwner }: ProjectMem
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [projectId, toast])
+
+  useEffect(() => {
+    fetchMembers()
+  }, [fetchMembers])
 
   const handleRemoveMember = async (memberId: string) => {
     try {
@@ -62,7 +62,7 @@ export function ProjectMembers({ projectId, currentUserId, isOwner }: ProjectMem
         description: "Member has been removed from the project",
       })
       fetchMembers()
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to remove member",

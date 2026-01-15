@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -31,15 +31,11 @@ export function InvitationList() {
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchInvitations()
-  }, [])
-
-  const fetchInvitations = async () => {
+  const fetchInvitations = useCallback(async () => {
     try {
       const data = await invitationApi.getUserInvitations()
       setInvitations(data)
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to fetch invitations",
@@ -48,7 +44,11 @@ export function InvitationList() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchInvitations()
+  }, [fetchInvitations])
 
   const handleAccept = async (invitationId: string) => {
     try {
@@ -58,7 +58,7 @@ export function InvitationList() {
         description: "You have joined the project",
       })
       fetchInvitations()
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to accept invitation",
@@ -75,7 +75,7 @@ export function InvitationList() {
         description: "You have declined the invitation",
       })
       fetchInvitations()
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to decline invitation",

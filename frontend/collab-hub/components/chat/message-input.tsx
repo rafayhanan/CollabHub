@@ -30,30 +30,6 @@ export function MessageInput({
   useEffect(() => {
     if (!channelId) return
 
-    const handleTypingStart = () => {
-      if (!isTyping) {
-        setIsTyping(true)
-        sendEvent({
-          type: "typing_start",
-          data: { channelId },
-        })
-      }
-
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current)
-      }
-
-      // Set new timeout to stop typing indicator
-      typingTimeoutRef.current = setTimeout(() => {
-        setIsTyping(false)
-        sendEvent({
-          type: "typing_stop",
-          data: { channelId },
-        })
-      }, 2000)
-    }
-
     const handleTypingStop = () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)

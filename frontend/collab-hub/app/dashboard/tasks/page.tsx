@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
@@ -48,7 +48,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     filterTasks()
-  }, [tasks, searchQuery, selectedProject])
+  }, [filterTasks])
 
   const loadData = async () => {
     try {
@@ -63,7 +63,7 @@ export default function TasksPage() {
     }
   }
 
-  const filterTasks = () => {
+  const filterTasks = useCallback(() => {
     let filtered = tasks
 
     // Filter by search query
@@ -81,7 +81,7 @@ export default function TasksPage() {
     }
 
     setFilteredTasks(filtered)
-  }
+  }, [tasks, searchQuery, selectedProject])
 
   const handleCreateTask = async (
     projectId: string,

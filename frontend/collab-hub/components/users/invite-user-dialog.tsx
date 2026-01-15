@@ -44,7 +44,7 @@ export function InviteUserDialog({ projectId, onInviteSent }: InviteUserDialogPr
       setEmail("")
       setOpen(false)
       onInviteSent?.()
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to send invitation",
