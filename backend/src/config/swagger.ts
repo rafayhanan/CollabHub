@@ -2,6 +2,11 @@ import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { Express } from 'express';
 
+const isProduction = process.env.NODE_ENV === 'production';
+const serverUrl = isProduction
+  ? (process.env.BACKEND_URL || 'https://collab-hub-backend.up.railway.app')
+  : `http://localhost:${process.env.PORT || 3000}`;
+
 const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
@@ -11,8 +16,8 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: 'http://localhost:3000', // change to your deployed domain in prod
-      description: 'Local dev server',
+      url: serverUrl,
+      description: isProduction ? 'Production server' : 'Local dev server',
     },
   ],
   components: {
