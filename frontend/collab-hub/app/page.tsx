@@ -17,7 +17,17 @@ export default function HomePage() {
     }
   }, [isAuthenticated, isLoading, router])
 
+  // Show loading state during hydration and auth check
   if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  // Only redirect if we're sure the user is authenticated (after hydration)
+  if (isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

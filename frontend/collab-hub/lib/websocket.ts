@@ -39,7 +39,8 @@ class WebSocketManager {
 
     try {
       // Connect to WebSocket server with auth token
-      this.ws = new WebSocket(`ws://localhost:3000/ws?token=${token}`)
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:5000/ws"
+      this.ws = new WebSocket(`${wsUrl}?token=${token}`)
 
       this.ws.onopen = () => {
         console.log("[WebSocket] Connected")
