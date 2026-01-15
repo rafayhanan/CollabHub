@@ -40,9 +40,26 @@ const authLimiter = rateLimit({
 });
 
 // Global middleware
+const normalizeOrigin = (origin: string) => origin.replace(/\/$/, '');
+
+const allowedOrigins = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((origin) => normalizeOrigin(origin.trim()))
+    .filter(Boolean);
+
 app.use(
     cors({
-        origin: process.env.FRONTEND_URL,
+        origin: (origin, callback) => {
+            // Allow non-browser requests or same-origin
+            if (!origin) return callback(null, true);
+
+            const normalizedOrigin = normalizeOrigin(origin);
+            if (allowedOrigins.length === 0 || allowedOrigins.includes(normalizedOrigin)) {
+                return callback(null, true);
+            }
+
+            return callback(new Error(`CORS blocked for origin: ${origin}`));
+        },
         credentials: true,
     }),
 );
