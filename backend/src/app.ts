@@ -17,12 +17,15 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy for Railway / reverse proxies (needed for rate limiting)
+app.set('trust proxy', 1);
+
 // Conditionally enable rate limiters (skip in tests)
 const isTest = process.env.NODE_ENV === 'test';
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 300,
     message: 'Too many requests from this IP, please try again after 15 minutes',
     legacyHeaders: false,
     standardHeaders: true,
@@ -30,7 +33,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 30,
     message: 'Too many authentication requests from this IP, please try again after 15 minutes',
     legacyHeaders: false,
     standardHeaders: true,
