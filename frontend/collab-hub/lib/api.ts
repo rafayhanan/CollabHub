@@ -15,7 +15,7 @@ export interface Project {
 export interface ProjectMember {
   userId: string
   projectId: string
-  role: "OWNER" | "MEMBER"
+  role: "OWNER" | "ADMIN" | "MEMBER"
   joinedAt: string
   user: {
     id: string
