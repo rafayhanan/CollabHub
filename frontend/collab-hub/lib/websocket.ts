@@ -113,6 +113,7 @@ class WebSocketManager {
 export const wsManager = new WebSocketManager()
 
 // Auto-connect when module loads
-if (typeof window !== "undefined") {
-  wsManager.connect()
-}
+// TODO: Enable this once WebSocket is implemented on the backend
+// if (typeof window !== "undefined") {
+//   wsManager.connect()
+// }

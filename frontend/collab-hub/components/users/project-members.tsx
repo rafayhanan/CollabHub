@@ -3,34 +3,19 @@
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Users, Crown, UserMinus } from "lucide-react"
-import { projectApi } from "@/lib/api"
+import { Users, Crown } from "lucide-react"
+import { projectApi, type ProjectMember } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { InviteUserDialog } from "./invite-user-dialog"
 
-interface ProjectMember {
-  id: string
-  userId: string
-  projectId: string
-  role: "OWNER" | "ADMIN" | "MEMBER"
-  joinedAt: string
-  user: {
-    id: string
-    name: string
-    email: string
-    avatarUrl?: string
-  }
-}
-
 interface ProjectMembersProps {
   projectId: string
-  currentUserId: string
+  currentUserId?: string // Optional - for future use when remove member is implemented
   isOwner: boolean
 }
 
-export function ProjectMembers({ projectId, currentUserId, isOwner }: ProjectMembersProps) {
+export function ProjectMembers({ projectId, isOwner }: ProjectMembersProps) {
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
@@ -53,23 +38,6 @@ export function ProjectMembers({ projectId, currentUserId, isOwner }: ProjectMem
   useEffect(() => {
     fetchMembers()
   }, [fetchMembers])
-
-  const handleRemoveMember = async (memberId: string) => {
-    try {
-      await projectApi.removeMember(projectId, memberId)
-      toast({
-        title: "Member removed",
-        description: "Member has been removed from the project",
-      })
-      fetchMembers()
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to remove member",
-        variant: "destructive",
-      })
-    }
-  }
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -118,15 +86,15 @@ export function ProjectMembers({ projectId, currentUserId, isOwner }: ProjectMem
       <CardContent>
         <div className="space-y-4">
           {members.map((member) => (
-            <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border">
+            <div key={member.userId} className="flex items-center justify-between p-3 rounded-lg border">
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarImage src={member.user.avatarUrl || "/placeholder.svg"} />
-                  <AvatarFallback>{getInitials(member.user.name)}</AvatarFallback>
+                  <AvatarFallback>{getInitials(member.user.name || member.user.email)}</AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-medium">{member.user.name}</p>
+                    <p className="font-medium">{member.user.name || member.user.email}</p>
                     {member.role === "OWNER" && <Crown className="h-4 w-4 text-emerald-600" />}
                   </div>
                   <p className="text-sm text-muted-foreground">{member.user.email}</p>
@@ -136,16 +104,7 @@ export function ProjectMembers({ projectId, currentUserId, isOwner }: ProjectMem
                 <Badge variant="outline" className={getRoleColor(member.role)}>
                   {member.role}
                 </Badge>
-                {isOwner && member.userId !== currentUserId && member.role !== "OWNER" && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleRemoveMember(member.userId)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <UserMinus className="h-4 w-4" />
-                  </Button>
-                )}
+                {/* Remove member button hidden - backend endpoint not implemented yet */}
               </div>
             </div>
           ))}

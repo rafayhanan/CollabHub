@@ -11,7 +11,10 @@ export function useWebSocket(handler?: WebSocketEventHandler) {
     // Subscribe to events if handler provided
     if (handler) {
       const unsubscribe = wsManager.subscribe(handler)
-      return unsubscribe
+      return () => {
+        // Ensure cleanup returns void (not the boolean from Set.delete)
+        unsubscribe()
+      }
     }
   }, [handler])
 

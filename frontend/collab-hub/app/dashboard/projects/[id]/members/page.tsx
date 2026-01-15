@@ -41,7 +41,7 @@ export default function ProjectMembersPage() {
     return <div>Project not found</div>
   }
 
-  const isOwner = project.ownerId === user?.id
+  const isOwner = project.members?.some((m) => m.userId === user?.id && m.role === "OWNER") || false
 
   return (
     <div className="space-y-6">

@@ -52,6 +52,20 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
                     },
                 },
             },
+            include: {
+                members: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                email: true,
+                                name: true,
+                                avatarUrl: true,
+                            },
+                        },
+                    },
+                },
+            },
         });
 
         if (!project) {
@@ -74,6 +88,20 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
                 members: {
                     some: {
                         userId,
+                    },
+                },
+            },
+            include: {
+                members: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                email: true,
+                                name: true,
+                                avatarUrl: true,
+                            },
+                        },
                     },
                 },
             },

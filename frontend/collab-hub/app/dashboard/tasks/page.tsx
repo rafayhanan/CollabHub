@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { getProjects, getUserTasks, createTask, updateTask, createProject, type Project, type Task } from "@/lib/api"
+import { getProjects, getUserTasks, createTask, updateTask, deleteTask, createProject, type Project, type Task } from "@/lib/api"
 import { Search, Plus, LayoutGrid, List } from "lucide-react"
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog"
 import { useTaskEvents } from "@/hooks/use-websocket"
@@ -35,34 +35,6 @@ export default function TasksPage() {
   const [createTaskStatus, setCreateTaskStatus] = useState<Task["status"]>("TODO")
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/login")
-      return
-    }
-
-    if (isAuthenticated) {
-      loadData()
-    }
-  }, [isAuthenticated, authLoading, router])
-
-  useEffect(() => {
-    filterTasks()
-  }, [filterTasks])
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true)
-      const [projectsData, tasksData] = await Promise.all([getProjects(), getUserTasks()])
-      setProjects(projectsData)
-      setTasks(tasksData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const filterTasks = useCallback(() => {
     let filtered = tasks
 
@@ -82,6 +54,34 @@ export default function TasksPage() {
 
     setFilteredTasks(filtered)
   }, [tasks, searchQuery, selectedProject])
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true)
+      const [projectsData, tasksData] = await Promise.all([getProjects(), getUserTasks()])
+      setProjects(projectsData)
+      setTasks(tasksData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load data")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login")
+      return
+    }
+
+    if (isAuthenticated) {
+      loadData()
+    }
+  }, [isAuthenticated, authLoading, router])
+
+  useEffect(() => {
+    filterTasks()
+  }, [filterTasks])
 
   const handleCreateTask = async (
     projectId: string,
@@ -110,9 +110,12 @@ export default function TasksPage() {
 
   const handleDeleteTask = async (task: Task) => {
     if (confirm(`Are you sure you want to delete "${task.title}"?`)) {
-      // Note: The API doesn't have a delete task endpoint in the provided documentation
-      // This would need to be implemented on the backend
-      console.log("Delete task:", task)
+      try {
+        await deleteTask(task.id)
+        setTasks((prev) => prev.filter((t) => t.id !== task.id))
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete task")
+      }
     }
   }
 

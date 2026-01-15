@@ -24,7 +24,7 @@ export function MessageInput({
   const [content, setContent] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const typingTimeoutRef = useRef<NodeJS.Timeout>()
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const { sendEvent } = useWebSocket()
 
   useEffect(() => {
