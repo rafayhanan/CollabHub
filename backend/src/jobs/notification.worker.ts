@@ -35,7 +35,7 @@ export const startNotificationWorker = () => {
 
       logger.info(`Notification email sent to ${job.data.to}`);
     },
-    { connection },
+    { connection: connection as any },
   );
 
   worker.on('failed', (job, err) => {
