@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { UserPlus, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSendInvitation } from "@/hooks/use-invitations"
+import { getApiErrorMessage } from "@/lib/api/error"
 
 interface InviteUserDialogProps {
   projectId: string
@@ -45,10 +46,10 @@ export function InviteUserDialog({ projectId, onInviteSent }: InviteUserDialogPr
       setEmail("")
       setOpen(false)
       onInviteSent?.()
-    } catch {
+    } catch (err) {
       toast({
         title: "Error",
-        description: "Failed to send invitation",
+        description: getApiErrorMessage(err, "Failed to send invitation"),
         variant: "destructive",
       })
     } finally {

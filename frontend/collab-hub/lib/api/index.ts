@@ -15,6 +15,7 @@ export * from "./services/projects"
 export * from "./services/tasks"
 export * from "./services/chat"
 export * from "./services/invitations"
+export * from "./error"
 
 import * as invitationService from "./services/invitations"
 import * as projectService from "./services/projects"

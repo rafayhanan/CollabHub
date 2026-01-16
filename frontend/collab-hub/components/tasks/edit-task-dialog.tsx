@@ -23,6 +23,7 @@ import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import type { Task } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
+import { getApiErrorMessage } from "@/lib/api/error"
 
 interface EditTaskDialogProps {
   open: boolean
@@ -72,7 +73,7 @@ export function EditTaskDialog({ open, onOpenChange, onUpdateTask, task }: EditT
       })
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update task")
+      setError(getApiErrorMessage(err, "Failed to update task"))
     } finally {
       setIsLoading(false)
     }

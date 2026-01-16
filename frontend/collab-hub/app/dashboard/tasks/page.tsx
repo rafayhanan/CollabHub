@@ -20,6 +20,7 @@ import { useAllProjectTasks, useCreateTask, useDeleteTask, useProjectTasks, useU
 import { Search, Plus, LayoutGrid, List } from "lucide-react"
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog"
 import { useTaskEvents } from "@/hooks/use-websocket"
+import { getApiErrorMessage } from "@/lib/api/error"
 
 export default function TasksPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
@@ -59,12 +60,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (projectsError || allTasksError || projectTasksError) {
-      const errorMessage =
-        (projectsError instanceof Error && projectsError.message) ||
-        (allTasksError instanceof Error && allTasksError.message) ||
-        (projectTasksError instanceof Error && projectTasksError.message) ||
-        "Failed to load data"
-      setError(errorMessage)
+      setError(getApiErrorMessage(projectsError || allTasksError || projectTasksError, "Failed to load data"))
     }
   }, [projectsError, allTasksError, projectTasksError])
 
@@ -104,7 +100,7 @@ export default function TasksPage() {
       try {
         await deleteTaskMutation(task)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to delete task")
+        setError(getApiErrorMessage(err, "Failed to delete task"))
       }
     }
   }
