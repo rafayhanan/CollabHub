@@ -46,12 +46,8 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange, isDragging }:
       className={cn(
         "cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
         getPriorityColor(),
-        isDragging && "opacity-50 rotate-2 shadow-lg",
+        isDragging && "opacity-60 shadow-lg",
       )}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData("text/plain", JSON.stringify(task))
-      }}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">

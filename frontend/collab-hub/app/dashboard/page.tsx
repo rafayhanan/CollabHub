@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { MobileSidebar } from "@/components/dashboard/mobile-sidebar"
 import { ProjectCard } from "@/components/dashboard/project-card"
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog"
 import { Button } from "@/components/ui/button"
@@ -62,8 +63,8 @@ export default function DashboardPage() {
 
   if (authLoading || isLoading || projectsLoading || tasksLoading) {
     return (
-      <div className="flex h-screen">
-        <div className="w-64 border-r bg-sidebar">
+      <div className="flex min-h-screen md:h-screen">
+        <div className="hidden md:block w-64 border-r bg-sidebar">
           <Skeleton className="h-16 w-full" />
           <div className="p-4 space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -95,13 +96,16 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar projects={projects} onCreateProject={() => setIsCreateDialogOpen(true)} />
+    <div className="flex min-h-screen md:h-screen bg-background">
+      <Sidebar projects={projects} onCreateProject={() => setIsCreateDialogOpen(true)} className="hidden md:flex" />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader onCreateProject={() => setIsCreateDialogOpen(true)} />
+        <DashboardHeader
+          onCreateProject={() => setIsCreateDialogOpen(true)}
+          mobileSidebar={<MobileSidebar projects={projects} onCreateProject={() => setIsCreateDialogOpen(true)} />}
+        />
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Welcome Section */}
             <div className="space-y-2">
@@ -162,9 +166,9 @@ export default function DashboardPage() {
 
             {/* Projects Section */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-xl font-semibold">Your Projects</h2>
-                <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
+                <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   New Project
                 </Button>

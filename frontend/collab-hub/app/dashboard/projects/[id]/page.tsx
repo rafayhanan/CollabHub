@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { MobileSidebar } from "@/components/dashboard/mobile-sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -38,8 +39,8 @@ export default function ProjectDetailPage() {
 
   if (projectsLoading || projectLoading || tasksLoading) {
     return (
-      <div className="flex h-screen">
-        <div className="w-64 border-r bg-sidebar">
+      <div className="flex min-h-screen md:h-screen">
+        <div className="hidden md:block w-64 border-r bg-sidebar">
           <Skeleton className="h-16 w-full" />
           <div className="p-4 space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -60,7 +61,7 @@ export default function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="p-6 text-center">
             <p className="text-muted-foreground">Project not found.</p>
@@ -74,13 +75,16 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} />
+    <div className="flex min-h-screen md:h-screen bg-background">
+      <Sidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} className="hidden md:flex" />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader onCreateProject={() => setIsCreateProjectDialogOpen(true)} />
+        <DashboardHeader
+          onCreateProject={() => setIsCreateProjectDialogOpen(true)}
+          mobileSidebar={<MobileSidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} />}
+        />
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           <div className="max-w-6xl mx-auto space-y-6">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold text-balance">{project.name}</h1>
@@ -116,13 +120,13 @@ export default function ProjectDetailPage() {
 
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <CardTitle>Project Tasks</CardTitle>
                     <CardDescription>Tasks associated with this project.</CardDescription>
                   </div>
                   <Link href="/dashboard/tasks">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
                       View All Tasks
                     </Button>
                   </Link>
@@ -134,7 +138,7 @@ export default function ProjectDetailPage() {
                 ) : (
                   <div className="space-y-3">
                     {tasks.slice(0, 6).map((task: Task) => (
-                      <div key={task.id} className="flex items-center justify-between border rounded-lg p-3">
+                      <div key={task.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border rounded-lg p-3">
                         <div>
                           <p className="font-medium">{task.title}</p>
                           {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
@@ -149,7 +153,7 @@ export default function ProjectDetailPage() {
 
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <CardTitle>Members</CardTitle>
                     <CardDescription>
@@ -157,7 +161,7 @@ export default function ProjectDetailPage() {
                     </CardDescription>
                   </div>
                   <Link href={`/dashboard/projects/${project.id}/members`}>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
                       Manage Members
                     </Button>
                   </Link>

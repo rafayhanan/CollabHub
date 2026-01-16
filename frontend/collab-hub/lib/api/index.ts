@@ -3,6 +3,7 @@ export type {
   ChannelMember,
   Invitation,
   Message,
+  Notification,
   Project,
   ProjectMember,
   Task,
@@ -15,6 +16,7 @@ export * from "./services/projects"
 export * from "./services/tasks"
 export * from "./services/chat"
 export * from "./services/invitations"
+export * from "./services/notifications"
 export * from "./error"
 
 import * as invitationService from "./services/invitations"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
+import { useInvitations } from "@/hooks/use-invitations"
 import {
   Home,
   FolderOpen,
@@ -20,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   Mail,
+  Bell,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -30,23 +32,31 @@ interface SidebarProps {
     description: string
   }>
   onCreateProject: () => void
+  onNavigate?: () => void
+  className?: string
 }
 
-export function Sidebar({ projects, onCreateProject }: SidebarProps) {
+export function Sidebar({ projects, onCreateProject, onNavigate, className }: SidebarProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const { data: invitations = [] } = useInvitations()
+  const pendingInvites = useMemo(
+    () => invitations.filter((invitation) => invitation.status === "PENDING").length,
+    [invitations],
+  )
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true)
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "My Tasks", href: "/dashboard/tasks", icon: CheckSquare },
     { name: "Messages", href: "/dashboard/messages", icon: MessageSquare },
-    { name: "Invitations", href: "/dashboard/invitations", icon: Mail },
+    { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
+    { name: "Invitations", href: "/dashboard/invitations", icon: Mail, badge: pendingInvites },
     { name: "Team", href: "/dashboard/team", icon: Users },
   ]
 
   return (
-    <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
+    <div className={cn("flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border", className)}>
       {/* Header */}
       <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
         <div className="flex items-center space-x-2">
@@ -70,9 +80,15 @@ export function Sidebar({ projects, onCreateProject }: SidebarProps) {
                     "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
                   )}
+                  onClick={() => onNavigate?.()}
                 >
                   <item.icon className="mr-3 h-4 w-4" />
                   {item.name}
+                  {item.badge ? (
+                    <Badge variant="secondary" className="ml-auto text-xs">
+                      {item.badge}
+                    </Badge>
+                  ) : null}
                 </Button>
               </Link>
             )
@@ -129,6 +145,7 @@ export function Sidebar({ projects, onCreateProject }: SidebarProps) {
                             "w-full justify-start text-xs text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                             isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
                           )}
+                          onClick={() => onNavigate?.()}
                         >
                           <FolderOpen className="mr-2 h-3 w-3" />
                           <span className="truncate">{project.name}</span>
@@ -145,6 +162,7 @@ export function Sidebar({ projects, onCreateProject }: SidebarProps) {
                                 pathname === `/dashboard/projects/${project.id}/members` &&
                                   "bg-sidebar-accent text-sidebar-accent-foreground",
                               )}
+                              onClick={() => onNavigate?.()}
                             >
                               <Users className="mr-2 h-3 w-3" />
                               <span className="truncate">Members</span>
@@ -174,14 +192,22 @@ export function Sidebar({ projects, onCreateProject }: SidebarProps) {
           </div>
         </div>
         <div className="flex space-x-1">
-          <Button variant="ghost" size="sm" className="flex-1 text-sidebar-foreground hover:bg-sidebar-accent">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex-1 text-sidebar-foreground hover:bg-sidebar-accent"
+            onClick={() => onNavigate?.()}
+          >
             <Settings className="h-3 w-3 mr-1" />
             Settings
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={logout}
+            onClick={() => {
+              logout()
+              onNavigate?.()
+            }}
             className="flex-1 text-sidebar-foreground hover:bg-sidebar-accent"
           >
             <LogOut className="h-3 w-3 mr-1" />
