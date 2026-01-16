@@ -21,6 +21,12 @@ export const getApiErrorMessage = (error: unknown, fallback: string) => {
       if (normalized.includes("invalid input")) {
         return "Please check your details and try again."
       }
+      if (normalized.includes("already a member")) {
+        return "This user is already a member of the project."
+      }
+      if (normalized.includes("already exists") || normalized.includes("already invited")) {
+        return "An invitation is already pending for this user."
+      }
       if (normalized.includes("invalid credentials") || normalized.includes("unauthorized")) {
         return "Incorrect email or password."
       }

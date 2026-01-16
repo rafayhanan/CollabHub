@@ -1,45 +1,32 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import logger from './logger';
 
-const host = process.env.SMTP_HOST;
-const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
-const user = process.env.SMTP_USER;
-const pass = process.env.SMTP_PASS;
-const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+const resendApiKey = process.env.RESEND_API_KEY;
+const from = process.env.RESEND_FROM;
 
-export const isMailerConfigured = Boolean(host && port && user && pass);
+export const isMailerConfigured = Boolean(resendApiKey && from);
 
-const createTransporter = () => {
-    if (!host || !port || !user || !pass) {
-        throw new Error('SMTP configuration is missing');
+const getResendClient = () => {
+    if (!resendApiKey) {
+        throw new Error('RESEND_API_KEY is not set');
     }
 
-    const secure = port === 465;
-
-    return nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: {
-            user,
-            pass,
-        },
-    });
+    return new Resend(resendApiKey);
 };
 
 export const sendEmail = async (options: { to: string; subject: string; html: string; text?: string }) => {
     if (!from) {
-        throw new Error('SMTP_FROM is not set');
+        throw new Error('RESEND_FROM is not set');
     }
 
-    const transporter = createTransporter();
+    const resend = getResendClient();
 
-    await transporter.sendMail({
+    await resend.emails.send({
         from,
         to: options.to,
         subject: options.subject,
-        text: options.text,
         html: options.html,
+        text: options.text,
     });
 };
 
@@ -92,6 +79,6 @@ export const getNotificationEmailTemplate = (params: { title: string; body: stri
 
 export const logMailerStatus = () => {
     if (!isMailerConfigured) {
-        logger.warn('SMTP is not configured. Invitation emails will be skipped.');
+        logger.warn('Resend is not configured. Invitation emails will be skipped.');
     }
 };
