@@ -1,4 +1,4 @@
-import { getToken } from "./auth"
+import { getAccessToken } from "../api/token"
 
 type MessagePayload = Record<string, unknown>
 type TaskPayload = Record<string, unknown>
@@ -33,7 +33,7 @@ class WebSocketManager {
     }
 
     this.isConnecting = true
-    const token = getToken()
+    const token = getAccessToken()
 
     if (!token) {
       console.warn("[WebSocket] No auth token available")

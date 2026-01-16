@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
@@ -11,17 +11,21 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getProjects, createProject, deleteProject, getUserTasks, type Project, type Task } from "@/lib/api"
+import type { Project } from "@/lib/api/types"
+import { useCreateProject, useDeleteProject, useProjects } from "@/hooks/use-projects"
+import { useUserTasks } from "@/hooks/use-tasks"
 import { Plus, CheckSquare, Clock, AlertCircle, TrendingUp } from "lucide-react"
 
 export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [userTasks, setUserTasks] = useState<Task[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects()
+  const { data: userTasks = [], isLoading: tasksLoading, error: tasksError } = useUserTasks()
+  const [isLoading, setIsLoading] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [error, setError] = useState("")
+  const { mutateAsync: createProjectMutation } = useCreateProject()
+  const { mutateAsync: deleteProjectMutation } = useDeleteProject()
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -30,32 +34,27 @@ export default function DashboardPage() {
     }
 
     if (isAuthenticated) {
-      loadDashboardData()
+      setIsLoading(false)
     }
   }, [isAuthenticated, authLoading, router])
 
-  const loadDashboardData = async () => {
-    try {
-      setIsLoading(true)
-      const [projectsData, tasksData] = await Promise.all([getProjects(), getUserTasks()])
-      setProjects(projectsData)
-      setUserTasks(tasksData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard data")
-    } finally {
-      setIsLoading(false)
+  useEffect(() => {
+    if (projectsError || tasksError) {
+      const errorMessage =
+        (projectsError instanceof Error && projectsError.message) ||
+        (tasksError instanceof Error && tasksError.message) ||
+        "Failed to load dashboard data"
+      setError(errorMessage)
     }
-  }
+  }, [projectsError, tasksError])
 
   const handleCreateProject = async (name: string, description: string) => {
-    const newProject = await createProject(name, description)
-    setProjects((prev) => [newProject, ...prev])
+    await createProjectMutation({ name, description })
   }
 
   const handleDeleteProject = async (project: Project) => {
     if (confirm(`Are you sure you want to delete "${project.name}"?`)) {
-      await deleteProject(project.id)
-      setProjects((prev) => prev.filter((p) => p.id !== project.id))
+      await deleteProjectMutation(project.id)
     }
   }
 
@@ -64,7 +63,7 @@ export default function DashboardPage() {
     console.log("Edit project:", project)
   }
 
-  if (authLoading || isLoading) {
+  if (authLoading || isLoading || projectsLoading || tasksLoading) {
     return (
       <div className="flex h-screen">
         <div className="w-64 border-r bg-sidebar">

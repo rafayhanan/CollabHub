@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageBubble } from "./message-bubble"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Message } from "@/lib/api"
+import type { Message } from "@/lib/api/types"
 
 interface MessageListProps {
   messages: Message[]

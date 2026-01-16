@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { TaskCard } from "./task-card"
 import { Plus } from "lucide-react"
-import type { Task } from "@/lib/api"
+import type { Task } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 interface KanbanColumnProps {

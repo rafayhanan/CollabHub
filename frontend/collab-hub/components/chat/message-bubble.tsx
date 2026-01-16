@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { MoreHorizontal, Edit, Trash2, Check, X } from "lucide-react"
-import type { Message } from "@/lib/api"
+import type { Message } from "@/lib/api/types"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 

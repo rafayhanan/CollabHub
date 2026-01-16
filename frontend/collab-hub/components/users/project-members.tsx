@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Users, Crown } from "lucide-react"
-import { projectApi, type ProjectMember } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { InviteUserDialog } from "./invite-user-dialog"
+import { useProject } from "@/hooks/use-projects"
+import type { ProjectMember } from "@/lib/api/types"
 
 interface ProjectMembersProps {
   projectId: string
@@ -16,28 +17,19 @@ interface ProjectMembersProps {
 }
 
 export function ProjectMembers({ projectId, isOwner }: ProjectMembersProps) {
-  const [members, setMembers] = useState<ProjectMember[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
+  const { data: project, isLoading, error } = useProject(projectId)
+  const members = useMemo<ProjectMember[]>(() => project?.members || [], [project])
 
-  const fetchMembers = useCallback(async () => {
-    try {
-      const project = await projectApi.getProject(projectId)
-      setMembers(project.members || [])
-    } catch {
+  useEffect(() => {
+    if (error) {
       toast({
         title: "Error",
         description: "Failed to fetch project members",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
-  }, [projectId, toast])
-
-  useEffect(() => {
-    fetchMembers()
-  }, [fetchMembers])
+  }, [error, toast])
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -80,7 +72,7 @@ export function ProjectMembers({ projectId, isOwner }: ProjectMembersProps) {
               {members.length} member{members.length !== 1 ? "s" : ""}
             </CardDescription>
           </div>
-          {isOwner && <InviteUserDialog projectId={projectId} onInviteSent={fetchMembers} />}
+          {isOwner && <InviteUserDialog projectId={projectId} />}
         </div>
       </CardHeader>
       <CardContent>

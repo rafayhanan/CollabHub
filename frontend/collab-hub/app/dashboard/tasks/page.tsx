@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
@@ -13,7 +13,10 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { getProjects, getUserTasks, createTask, updateTask, deleteTask, createProject, type Project, type Task } from "@/lib/api"
+import { useQueryClient } from "@tanstack/react-query"
+import type { Task } from "@/lib/api/types"
+import { useProjects, useCreateProject } from "@/hooks/use-projects"
+import { useAllProjectTasks, useCreateTask, useDeleteTask, useProjectTasks, useUpdateTask } from "@/hooks/use-tasks"
 import { Search, Plus, LayoutGrid, List } from "lucide-react"
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog"
 import { useTaskEvents } from "@/hooks/use-websocket"
@@ -21,10 +24,10 @@ import { useTaskEvents } from "@/hooks/use-websocket"
 export default function TasksPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects()
+  const projectIds = useMemo(() => projects.map((project) => project.id), [projects])
+  const [isLoading, setIsLoading] = useState(false)
   const [isCreateTaskDialogOpen, setIsCreateTaskDialogOpen] = useState(false)
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false)
   const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false)
@@ -35,38 +38,35 @@ export default function TasksPage() {
   const [createTaskStatus, setCreateTaskStatus] = useState<Task["status"]>("TODO")
   const [error, setError] = useState("")
 
-  const filterTasks = useCallback(() => {
-    let filtered = tasks
+  const {
+    data: allProjectTasks = [],
+    isLoading: allTasksLoading,
+    error: allTasksError,
+  } = useAllProjectTasks(selectedProject === "all" ? projectIds : [])
+  const {
+    data: projectTasks = [],
+    isLoading: projectTasksLoading,
+    error: projectTasksError,
+  } = useProjectTasks(selectedProject !== "all" ? selectedProject : null)
 
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (task) =>
-          task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          task.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+  const tasks = selectedProject === "all" ? allProjectTasks : projectTasks
+  const isTasksLoading = selectedProject === "all" ? allTasksLoading : projectTasksLoading
+
+  const { mutateAsync: createTaskMutation } = useCreateTask()
+  const { mutateAsync: updateTaskMutation } = useUpdateTask()
+  const { mutateAsync: deleteTaskMutation } = useDeleteTask()
+  const { mutateAsync: createProjectMutation } = useCreateProject()
+
+  useEffect(() => {
+    if (projectsError || allTasksError || projectTasksError) {
+      const errorMessage =
+        (projectsError instanceof Error && projectsError.message) ||
+        (allTasksError instanceof Error && allTasksError.message) ||
+        (projectTasksError instanceof Error && projectTasksError.message) ||
+        "Failed to load data"
+      setError(errorMessage)
     }
-
-    // Filter by project
-    if (selectedProject !== "all") {
-      filtered = filtered.filter((task) => task.projectId === selectedProject)
-    }
-
-    setFilteredTasks(filtered)
-  }, [tasks, searchQuery, selectedProject])
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true)
-      const [projectsData, tasksData] = await Promise.all([getProjects(), getUserTasks()])
-      setProjects(projectsData)
-      setTasks(tasksData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  }, [projectsError, allTasksError, projectTasksError])
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -75,13 +75,9 @@ export default function TasksPage() {
     }
 
     if (isAuthenticated) {
-      loadData()
+      setIsLoading(false)
     }
   }, [isAuthenticated, authLoading, router])
-
-  useEffect(() => {
-    filterTasks()
-  }, [filterTasks])
 
   const handleCreateTask = async (
     projectId: string,
@@ -90,13 +86,9 @@ export default function TasksPage() {
     status: Task["status"],
     dueDate?: string,
   ) => {
-    const newTask = await createTask(projectId, title, description, dueDate)
-    // Update the task status if different from default
+    const newTask = await createTaskMutation({ projectId, title, description, dueDate })
     if (status !== "TODO") {
-      const updatedTask = await updateTask(newTask.id, { status })
-      setTasks((prev) => [updatedTask, ...prev])
-    } else {
-      setTasks((prev) => [newTask, ...prev])
+      await updateTaskMutation({ taskId: newTask.id, updates: { status } })
     }
   }
 
@@ -104,15 +96,13 @@ export default function TasksPage() {
     taskId: string,
     updates: Partial<Pick<Task, "title" | "description" | "status" | "dueDate">>,
   ) => {
-    const updatedTask = await updateTask(taskId, updates)
-    setTasks((prev) => prev.map((task) => (task.id === taskId ? updatedTask : task)))
+    await updateTaskMutation({ taskId, updates })
   }
 
   const handleDeleteTask = async (task: Task) => {
     if (confirm(`Are you sure you want to delete "${task.title}"?`)) {
       try {
-        await deleteTask(task.id)
-        setTasks((prev) => prev.filter((t) => t.id !== task.id))
+        await deleteTaskMutation(task)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to delete task")
       }
@@ -129,27 +119,59 @@ export default function TasksPage() {
   }
 
   const handleCreateProject = async (name: string, description: string) => {
-    const newProject = await createProject(name, description)
-    setProjects((prev) => [newProject, ...prev])
+    await createProjectMutation({ name, description })
   }
 
   useTaskEvents(selectedProject === "all" ? null : selectedProject, {
     onTaskCreated: (task) => {
-      setTasks((prev) => [task, ...prev])
+      queryClient.setQueryData<Task[]>(["tasks", "project", task.projectId], (old) =>
+        old ? [task, ...old] : [task],
+      )
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: ["tasks", "projects"] },
+        (old) => (old ? [task, ...old] : old),
+      )
     },
     onTaskUpdated: (updatedTask) => {
-      setTasks((prev) => prev.map((task) => (task.id === updatedTask.id ? updatedTask : task)))
+      queryClient.setQueryData<Task[]>(["tasks", "project", updatedTask.projectId], (old) =>
+        old ? old.map((task) => (task.id === updatedTask.id ? updatedTask : task)) : old,
+      )
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: ["tasks", "projects"] },
+        (old) => (old ? old.map((task) => (task.id === updatedTask.id ? updatedTask : task)) : old),
+      )
     },
     onTaskDeleted: (taskId) => {
-      setTasks((prev) => prev.filter((task) => task.id !== taskId))
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: ["tasks"] },
+        (old) => (old ? old.filter((task) => task.id !== taskId) : old),
+      )
     },
   })
+
+  const filteredTasks = useMemo(() => {
+    let filtered = tasks
+
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (task) =>
+          task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          task.description?.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    }
+
+    if (selectedProject !== "all") {
+      filtered = filtered.filter((task) => task.projectId === selectedProject)
+    }
+
+    return filtered
+  }, [tasks, searchQuery, selectedProject])
 
   const todoTasks = filteredTasks.filter((task) => task.status === "TODO")
   const inProgressTasks = filteredTasks.filter((task) => task.status === "IN_PROGRESS")
   const doneTasks = filteredTasks.filter((task) => task.status === "DONE")
 
-  if (authLoading || isLoading) {
+  if (authLoading || isLoading || projectsLoading || isTasksLoading) {
     return (
       <div className="flex h-screen">
         <div className="w-64 border-r bg-sidebar">
