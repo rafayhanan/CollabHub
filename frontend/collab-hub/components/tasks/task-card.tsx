@@ -108,7 +108,9 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange, isDragging }:
               {task.assignments.slice(0, 3).map((assignment, index) => (
                 <Avatar key={index} className="h-5 w-5 border border-background">
                   <AvatarFallback className="text-xs">
-                    {assignment.user.name?.charAt(0) || assignment.user.email.charAt(0).toUpperCase()}
+                    {assignment.user?.name?.charAt(0) ||
+                      assignment.user?.email?.charAt(0).toUpperCase() ||
+                      "?"}
                   </AvatarFallback>
                 </Avatar>
               ))}
