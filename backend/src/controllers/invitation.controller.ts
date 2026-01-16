@@ -3,6 +3,7 @@ import prisma from '../config/prisma';
 import { AuthRequest } from '../utils/types';
 import logger from '../utils/logger';
 import { invitationQueue } from '../queues/invitation.queue';
+import { createNotification } from '../utils/notifications';
 
 export const getInvitations = async (req: AuthRequest, res: Response) => {
     const userId = (req.user as { sub: string }).sub;
@@ -111,6 +112,18 @@ export const sendInvitation = async (req: AuthRequest, res: Response) => {
             },
         });
 
+        if (invitedUser) {
+            createNotification({
+                userId: invitedUser.id,
+                type: 'INVITATION_SENT',
+                title: `Invitation to join ${project.name}`,
+                body: `${inviter?.name || inviter?.email || 'A teammate'} invited you to join ${project.name}.`,
+                link: '/dashboard/invitations',
+            }).catch((notificationError) => {
+                logger.error('Failed to create invitation notification:', notificationError);
+            });
+        }
+
         if (invitationQueue) {
             invitationQueue
                 .add('send-invite-email', {
@@ -161,6 +174,23 @@ export const acceptInvitation = async (req: AuthRequest, res: Response) => {
                     role: 'MEMBER',
                 },
             });
+        });
+
+        const project = await prisma.project.findUnique({
+            where: { id: invitation.projectId },
+            select: { name: true },
+        });
+
+        createNotification({
+            userId: invitation.invitedById,
+            type: 'INVITATION_ACCEPTED',
+            title: `${user.name || user.email} joined ${project?.name || 'your project'}`,
+            body: `${user.name || user.email} accepted the invitation and joined ${project?.name || 'your project'}.`,
+            link: `/dashboard/projects/${invitation.projectId}/members`,
+            sendEmail: true,
+            userEmail: (await prisma.user.findUnique({ where: { id: invitation.invitedById }, select: { email: true } }))?.email,
+        }).catch((notificationError) => {
+            logger.error('Failed to create acceptance notification:', notificationError);
         });
 
         res.json({ message: 'Invitation accepted successfully' });

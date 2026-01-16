@@ -14,6 +14,12 @@ enum Role {
   MEMBER
 }
 
+enum NotificationType {
+  INVITATION_SENT
+  INVITATION_ACCEPTED
+  TASK_ASSIGNED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -27,8 +33,21 @@ model User {
   taskAssignments TaskAssignment[]
   channelMembers  ChannelMember[]
   messages        Message[]
+  notifications   Notification[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
 }
 
 model Project {
