@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../utils/types';
 import logger from '../utils/logger';
+import { invitationQueue } from '../queues/invitation.queue';
 
 export const getInvitations = async (req: AuthRequest, res: Response) => {
     const userId = (req.user as { sub: string }).sub;
@@ -54,6 +55,11 @@ export const sendInvitation = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ message: 'Project not found' });
         }
 
+        const inviter = await prisma.user.findUnique({
+            where: { id: invitedById },
+            select: { name: true, email: true },
+        });
+
         const invitingUser = await prisma.userProject.findFirst({
             where: {
                 userId: invitedById,
@@ -104,6 +110,20 @@ export const sendInvitation = async (req: AuthRequest, res: Response) => {
                 invitedUserEmail,
             },
         });
+
+        if (invitationQueue) {
+            invitationQueue
+                .add('send-invite-email', {
+                    invitationId: invitation.id,
+                    projectName: project.name,
+                    invitedUserEmail,
+                    inviterName: inviter?.name || inviter?.email || 'A teammate',
+                    inviterEmail: inviter?.email,
+                })
+                .catch((queueError) => {
+                    logger.error('Failed to enqueue invitation email:', queueError);
+                });
+        }
 
         res.status(201).json(invitation);
     } catch (error) {
