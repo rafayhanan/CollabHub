@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { Sidebar } from "@/components/dashboard/sidebar"
+import { MobileSidebar } from "@/components/dashboard/mobile-sidebar"
 import { ChannelList } from "@/components/chat/channel-list"
 import { MessageList } from "@/components/chat/message-list"
 import { MessageInput } from "@/components/chat/message-input"
@@ -164,8 +165,8 @@ export default function MessagesPage() {
 
   if (authLoading || projectsLoading || tasksLoading || channelsLoading) {
     return (
-      <div className="flex h-screen">
-        <div className="w-64 border-r bg-sidebar">
+      <div className="flex min-h-screen md:h-screen">
+        <div className="hidden md:block w-64 border-r bg-sidebar">
           <Skeleton className="h-16 w-full" />
           <div className="p-4 space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -175,8 +176,8 @@ export default function MessagesPage() {
         </div>
         <div className="flex-1">
           <Skeleton className="h-16 w-full" />
-          <div className="flex h-[calc(100vh-4rem)]">
-            <div className="w-64 border-r">
+          <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)]">
+            <div className="md:w-64 border-r">
               <Skeleton className="h-full w-full" />
             </div>
             <div className="flex-1">
@@ -189,13 +190,16 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} />
+    <div className="flex min-h-screen md:h-screen bg-background">
+      <Sidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} className="hidden md:flex" />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader onCreateProject={() => setIsCreateProjectDialogOpen(true)} />
+        <DashboardHeader
+          onCreateProject={() => setIsCreateProjectDialogOpen(true)}
+          mobileSidebar={<MobileSidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} />}
+        />
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           <ChannelList
             channels={channels}
             activeChannelId={activeChannel?.id}
@@ -213,8 +217,8 @@ export default function MessagesPage() {
               <>
                 {/* Channel Header */}
                 <div className="border-b border-border p-4 bg-background">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {activeChannel.type === "PROJECT_GENERAL" && <Hash className="h-5 w-5 text-muted-foreground" />}
                       {activeChannel.type === "TASK_SPECIFIC" && (
                         <MessageSquare className="h-5 w-5 text-muted-foreground" />
@@ -250,7 +254,7 @@ export default function MessagesPage() {
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center">
-                <Card className="w-96">
+                <Card className="w-full max-w-md mx-4">
                   <CardHeader className="text-center">
                     <CardTitle className="flex items-center justify-center space-x-2">
                       <MessageSquare className="h-6 w-6" />

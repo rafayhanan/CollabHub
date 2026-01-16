@@ -7,14 +7,14 @@ export const sendInvitation = async (projectId: string, email: string): Promise<
 }
 
 export const getUserInvitations = async (): Promise<Invitation[]> => {
-  const response = await apiClient.get<Invitation[]>("/users/me/invitations")
+  const response = await apiClient.get<Invitation[]>("/invitations")
   return response.data
 }
 
 export const acceptInvitation = async (invitationId: string): Promise<void> => {
-  await apiClient.get(`/invitations/${invitationId}/accept`)
+  await apiClient.post(`/invitations/${invitationId}/accept`)
 }
 
 export const declineInvitation = async (invitationId: string): Promise<void> => {
-  await apiClient.get(`/invitations/${invitationId}/decline`)
+  await apiClient.post(`/invitations/${invitationId}/decline`)
 }

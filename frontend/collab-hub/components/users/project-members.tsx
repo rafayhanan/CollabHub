@@ -79,7 +79,7 @@ export function ProjectMembers({ projectId, isOwner }: ProjectMembersProps) {
       <CardContent>
         <div className="space-y-4">
           {members.map((member) => (
-            <div key={member.userId} className="flex items-center justify-between p-3 rounded-lg border">
+            <div key={member.userId} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border">
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarImage src={member.user.avatarUrl || "/placeholder.svg"} />

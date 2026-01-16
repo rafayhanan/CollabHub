@@ -88,26 +88,26 @@ export function InvitationList() {
       {pendingInvitations.map((invitation) => (
         <Card key={invitation.id}>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-lg">{invitation.project.name}</CardTitle>
                 <CardDescription>
-                  Invited by {invitation.invitedBy.name} ({invitation.invitedBy.email})
+                  Invited by {invitation.invitedBy.name || invitation.invitedBy.email} ({invitation.invitedBy.email})
                 </CardDescription>
               </div>
-              <Badge variant="secondary" className="gap-1">
+              <Badge variant="secondary" className="gap-1 w-fit">
                 <Clock className="h-3 w-3" />
                 Pending
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => handleAccept(invitation.id)} className="gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button size="sm" onClick={() => handleAccept(invitation.id)} className="gap-2 w-full sm:w-auto">
                 <Check className="h-4 w-4" />
                 Accept
               </Button>
-              <Button size="sm" variant="outline" onClick={() => handleDecline(invitation.id)} className="gap-2">
+              <Button size="sm" variant="outline" onClick={() => handleDecline(invitation.id)} className="gap-2 w-full sm:w-auto">
                 <X className="h-4 w-4" />
                 Decline
               </Button>

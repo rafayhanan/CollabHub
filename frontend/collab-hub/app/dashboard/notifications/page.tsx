@@ -1,35 +1,24 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { useParams } from "next/navigation"
-import { ProjectMembers } from "@/components/users/project-members"
-import { useAuth } from "@/hooks/use-auth"
-import { useProject } from "@/hooks/use-projects"
+import { useState } from "react"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
-import { MobileSidebar } from "@/components/dashboard/mobile-sidebar"
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog"
+import { NotificationList } from "@/components/notifications/notification-list"
+import { MobileSidebar } from "@/components/dashboard/mobile-sidebar"
 import { useCreateProject, useProjects } from "@/hooks/use-projects"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export default function ProjectMembersPage() {
-  const params = useParams()
-  const { user } = useAuth()
-  const projectId = typeof params.id === "string" ? params.id : null
-  const { data: project, isLoading } = useProject(projectId)
-  const { data: projects = [], isLoading: projectsLoading } = useProjects()
-  const { mutateAsync: createProjectMutation } = useCreateProject()
+export default function NotificationsPage() {
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false)
-  const isOwner = useMemo(
-    () => project?.members?.some((m) => m.userId === user?.id && m.role === "OWNER") || false,
-    [project, user],
-  )
+  const { data: projects = [], isLoading } = useProjects()
+  const { mutateAsync: createProjectMutation } = useCreateProject()
 
   const handleCreateProject = async (name: string, description: string) => {
     await createProjectMutation({ name, description })
   }
 
-  if (isLoading || projectsLoading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen md:h-screen">
         <div className="hidden md:block w-64 border-r bg-sidebar">
@@ -51,10 +40,6 @@ export default function ProjectMembersPage() {
     )
   }
 
-  if (!project) {
-    return <div>Project not found</div>
-  }
-
   return (
     <div className="flex min-h-screen md:h-screen bg-background">
       <Sidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} className="hidden md:flex" />
@@ -68,11 +53,11 @@ export default function ProjectMembersPage() {
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <div className="max-w-6xl mx-auto space-y-6">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{project.name} - Members</h1>
-              <p className="text-muted-foreground">Manage project members and invitations</p>
+              <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+              <p className="text-muted-foreground">All your project updates in one place</p>
             </div>
 
-            <ProjectMembers projectId={project.id} currentUserId={user?.id || ""} isOwner={isOwner} />
+            <NotificationList />
           </div>
         </main>
       </div>

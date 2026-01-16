@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { Sidebar } from "@/components/dashboard/sidebar"
+import { MobileSidebar } from "@/components/dashboard/mobile-sidebar"
 import { KanbanColumn } from "@/components/tasks/kanban-column"
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog"
 import { EditTaskDialog } from "@/components/tasks/edit-task-dialog"
@@ -21,6 +22,8 @@ import { Search, Plus, LayoutGrid, List } from "lucide-react"
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog"
 import { useTaskEvents } from "@/hooks/use-websocket"
 import { getApiErrorMessage } from "@/lib/api/error"
+import { DndContext, DragOverlay, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core"
+import { TaskCard } from "@/components/tasks/task-card"
 
 export default function TasksPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
@@ -37,6 +40,7 @@ export default function TasksPage() {
   const [selectedProject, setSelectedProject] = useState<string>("all")
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban")
   const [createTaskStatus, setCreateTaskStatus] = useState<Task["status"]>("TODO")
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [error, setError] = useState("")
 
   const {
@@ -166,11 +170,52 @@ export default function TasksPage() {
   const todoTasks = filteredTasks.filter((task) => task.status === "TODO")
   const inProgressTasks = filteredTasks.filter((task) => task.status === "IN_PROGRESS")
   const doneTasks = filteredTasks.filter((task) => task.status === "DONE")
+  const tasksById = useMemo(() => new Map(filteredTasks.map((task) => [task.id, task])), [filteredTasks])
+  const activeTask = activeTaskId ? tasksById.get(activeTaskId) : null
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+  )
+
+  const handleDragStart = (event: { active: { id: string | number } }) => {
+    setActiveTaskId(String(event.active.id))
+  }
+
+  const handleDragEnd = (event: { active: { id: string | number }; over: { id: string | number } | null }) => {
+    const { active, over } = event
+    setActiveTaskId(null)
+
+    if (!over) return
+    const activeId = String(active.id)
+    const overId = String(over.id)
+    const task = tasksById.get(activeId)
+    if (!task) return
+
+    const statusIds: Task["status"][] = ["TODO", "IN_PROGRESS", "DONE"]
+    let targetStatus: Task["status"] | null = null
+
+    if (statusIds.includes(overId as Task["status"])) {
+      targetStatus = overId as Task["status"]
+    } else {
+      const overTask = tasksById.get(overId)
+      if (overTask) targetStatus = overTask.status
+    }
+
+    if (targetStatus && targetStatus !== task.status) {
+      handleStatusChange(task, targetStatus)
+    }
+  }
+
+  const handleDragCancel = () => {
+    setActiveTaskId(null)
+  }
 
   if (authLoading || isLoading || projectsLoading || isTasksLoading) {
     return (
-      <div className="flex h-screen">
-        <div className="w-64 border-r bg-sidebar">
+      <div className="flex min-h-screen md:h-screen">
+        <div className="hidden md:block w-64 border-r bg-sidebar">
           <Skeleton className="h-16 w-full" />
           <div className="p-4 space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -193,30 +238,37 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} />
+    <div className="flex min-h-screen md:h-screen bg-background">
+      <Sidebar
+        projects={projects}
+        onCreateProject={() => setIsCreateProjectDialogOpen(true)}
+        className="hidden md:flex"
+      />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader onCreateProject={() => setIsCreateProjectDialogOpen(true)} />
+        <DashboardHeader
+          onCreateProject={() => setIsCreateProjectDialogOpen(true)}
+          mobileSidebar={<MobileSidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} />}
+        />
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <h1 className="text-2xl font-bold text-balance">Task Management</h1>
                 <p className="text-muted-foreground">Organize and track your tasks across all projects.</p>
               </div>
-              <Button onClick={() => setIsCreateTaskDialogOpen(true)}>
+              <Button onClick={() => setIsCreateTaskDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 New Task
               </Button>
             </div>
 
             {/* Filters */}
-            <div className="flex items-center justify-between space-x-4">
-              <div className="flex items-center space-x-4 flex-1">
-                <div className="relative max-w-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap flex-1">
+                <div className="relative w-full sm:max-w-sm">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search tasks..."
@@ -227,7 +279,7 @@ export default function TasksPage() {
                 </div>
 
                 <Select value={selectedProject} onValueChange={setSelectedProject}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -269,47 +321,68 @@ export default function TasksPage() {
 
             {/* Kanban Board */}
             {viewMode === "kanban" && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <KanbanColumn
-                  title="Todo"
-                  status="TODO"
-                  tasks={todoTasks}
-                  onTaskEdit={handleEditTask}
-                  onTaskDelete={handleDeleteTask}
-                  onTaskStatusChange={handleStatusChange}
-                  onCreateTask={(status) => {
-                    setCreateTaskStatus(status)
-                    setIsCreateTaskDialogOpen(true)
-                  }}
-                  color="bg-muted"
-                />
-                <KanbanColumn
-                  title="In Progress"
-                  status="IN_PROGRESS"
-                  tasks={inProgressTasks}
-                  onTaskEdit={handleEditTask}
-                  onTaskDelete={handleDeleteTask}
-                  onTaskStatusChange={handleStatusChange}
-                  onCreateTask={(status) => {
-                    setCreateTaskStatus(status)
-                    setIsCreateTaskDialogOpen(true)
-                  }}
-                  color="bg-secondary"
-                />
-                <KanbanColumn
-                  title="Done"
-                  status="DONE"
-                  tasks={doneTasks}
-                  onTaskEdit={handleEditTask}
-                  onTaskDelete={handleDeleteTask}
-                  onTaskStatusChange={handleStatusChange}
-                  onCreateTask={(status) => {
-                    setCreateTaskStatus(status)
-                    setIsCreateTaskDialogOpen(true)
-                  }}
-                  color="bg-primary"
-                />
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <KanbanColumn
+                    title="Todo"
+                    status="TODO"
+                    tasks={todoTasks}
+                    onTaskEdit={handleEditTask}
+                    onTaskDelete={handleDeleteTask}
+                    onTaskStatusChange={handleStatusChange}
+                    onCreateTask={(status) => {
+                      setCreateTaskStatus(status)
+                      setIsCreateTaskDialogOpen(true)
+                    }}
+                    color="bg-muted"
+                  />
+                  <KanbanColumn
+                    title="In Progress"
+                    status="IN_PROGRESS"
+                    tasks={inProgressTasks}
+                    onTaskEdit={handleEditTask}
+                    onTaskDelete={handleDeleteTask}
+                    onTaskStatusChange={handleStatusChange}
+                    onCreateTask={(status) => {
+                      setCreateTaskStatus(status)
+                      setIsCreateTaskDialogOpen(true)
+                    }}
+                    color="bg-secondary"
+                  />
+                  <KanbanColumn
+                    title="Done"
+                    status="DONE"
+                    tasks={doneTasks}
+                    onTaskEdit={handleEditTask}
+                    onTaskDelete={handleDeleteTask}
+                    onTaskStatusChange={handleStatusChange}
+                    onCreateTask={(status) => {
+                      setCreateTaskStatus(status)
+                      setIsCreateTaskDialogOpen(true)
+                    }}
+                    color="bg-primary"
+                  />
+                </div>
+                <DragOverlay>
+                  {activeTask ? (
+                    <div className="w-[300px]">
+                      <TaskCard
+                        task={activeTask}
+                        onEdit={handleEditTask}
+                        onDelete={handleDeleteTask}
+                        onStatusChange={handleStatusChange}
+                        isDragging
+                      />
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             )}
 
             {/* List View */}
@@ -323,7 +396,7 @@ export default function TasksPage() {
                   <div className="grid gap-4">
                     {filteredTasks.map((task) => (
                       <div key={task.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div className="space-y-1">
                             <h3 className="font-medium">{task.title}</h3>
                             {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}

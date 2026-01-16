@@ -73,8 +73,8 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
         )}
 
         {/* Stats */}
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
+          <div className="flex flex-wrap items-center gap-3">
             {project.taskStats && (
               <div className="flex items-center space-x-1 text-muted-foreground">
                 <CheckSquare className="h-3 w-3" />

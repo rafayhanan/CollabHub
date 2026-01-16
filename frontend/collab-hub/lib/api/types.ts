@@ -117,3 +117,14 @@ export interface Invitation {
         email: string
     }
 }
+
+export interface Notification {
+    id: string
+    userId: string
+    type: "INVITATION_SENT" | "INVITATION_ACCEPTED" | "TASK_ASSIGNED"
+    title: string
+    body: string
+    link?: string | null
+    readAt?: string | null
+    createdAt: string
+}
