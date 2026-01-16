@@ -70,6 +70,26 @@ export const getInviteEmailTemplate = (params: {
     return { subject, text, html };
 };
 
+export const getNotificationEmailTemplate = (params: { title: string; body: string; link?: string }) => {
+  const subject = params.title;
+  const text = params.link ? `${params.body}\n\nOpen: ${params.link}` : params.body;
+  const html = `
+    <div style="font-family: Arial, sans-serif; color: #111;">
+      <h2>${params.title}</h2>
+      <p>${params.body}</p>
+      ${
+        params.link
+          ? `<p><a href="${params.link}" style="color: #2563eb; text-decoration: none;">Open notification</a></p>
+             <p>If the link doesn’t work, copy and paste this URL:</p>
+             <p>${params.link}</p>`
+          : ''
+      }
+    </div>
+  `;
+
+  return { subject, text, html };
+};
+
 export const logMailerStatus = () => {
     if (!isMailerConfigured) {
         logger.warn('SMTP is not configured. Invitation emails will be skipped.');

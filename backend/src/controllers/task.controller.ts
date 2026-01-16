@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../utils/types';
 import logger from '../utils/logger';
+import { createNotification } from '../utils/notifications';
 
 export const createTask = async (req: AuthRequest, res: Response) => {
     const { projectId } = req.params;
@@ -90,6 +91,33 @@ export const createTask = async (req: AuthRequest, res: Response) => {
             }
         });
 
+        if (assignments && assignments.length > 0) {
+            const project = await prisma.project.findUnique({
+                where: { id: projectId },
+                select: { name: true },
+            });
+            const assigneeUsers = await prisma.user.findMany({
+                where: { id: { in: assignments.map((a) => a.userId) } },
+                select: { id: true, name: true, email: true },
+            });
+
+            await Promise.all(
+                assigneeUsers.map((assignee) =>
+                    createNotification({
+                        userId: assignee.id,
+                        userEmail: assignee.email,
+                        type: 'TASK_ASSIGNED',
+                        title: `Task assigned: ${task.title}`,
+                        body: `You were assigned to a task in ${project?.name || 'a project'}.`,
+                        link: '/dashboard/tasks',
+                        sendEmail: true,
+                    }).catch((notificationError) => {
+                        logger.error('Failed to create task assignment notification:', notificationError);
+                    }),
+                ),
+            );
+        }
+
         res.status(201).json(result);
     } catch (error: any) {
         logger.error('Error creating task:', error);
@@ -150,6 +178,32 @@ export const assignTask = async (req: AuthRequest, res: Response) => {
                 },
             },
         });
+
+        const project = await prisma.project.findUnique({
+            where: { id: task.projectId },
+            select: { name: true },
+        });
+
+        const assigneeUsers = await prisma.user.findMany({
+            where: { id: { in: assignments.map((a) => a.userId) } },
+            select: { id: true, name: true, email: true },
+        });
+
+        await Promise.all(
+            assigneeUsers.map((assignee) =>
+                createNotification({
+                    userId: assignee.id,
+                    userEmail: assignee.email,
+                    type: 'TASK_ASSIGNED',
+                    title: `Task assigned: ${task.title}`,
+                    body: `You were assigned to a task in ${project?.name || 'a project'}.`,
+                    link: '/dashboard/tasks',
+                    sendEmail: true,
+                }).catch((notificationError) => {
+                    logger.error('Failed to create task assignment notification:', notificationError);
+                }),
+            ),
+        );
 
         res.status(200).json(updated);
     } catch (error) {

@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import app from './app';
 import logger from './utils/logger';
 import { startInvitationWorker } from './jobs/invitation.worker';
+import { startNotificationWorker } from './jobs/notification.worker';
 import { logRedisStatus } from './config/redis';
 import { logMailerStatus } from './utils/mailer';
 
@@ -17,6 +18,7 @@ const server = app.listen(PORT, () => {
 logRedisStatus();
 logMailerStatus();
 startInvitationWorker();
+startNotificationWorker();
 
 const gracefulShutdown = () => {
   logger.info('Shutting down gracefully...');

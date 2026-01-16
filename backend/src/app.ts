@@ -10,6 +10,7 @@ import projectRoutes from './routes/project.routes';
 import invitationRoutes from './routes/invitation.routes';
 import taskRoutes from './routes/task.routes';
 import chatRoutes from './routes/chat.routes';
+import notificationRoutes from './routes/notification.routes';
 import { setupSwagger } from './config/swagger';
 import { errorHandler } from './middleware/error.middleware';
 
@@ -77,6 +78,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api', invitationRoutes);
 app.use('/api', taskRoutes);
 app.use('/api/channels', chatRoutes);
+app.use('/api', notificationRoutes);
 
 // Error handler
 app.use(errorHandler);
