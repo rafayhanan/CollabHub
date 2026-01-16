@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Check, X, Mail, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAcceptInvitation, useDeclineInvitation, useInvitations } from "@/hooks/use-invitations"
+import { getApiErrorMessage } from "@/lib/api/error"
 
 export function InvitationList() {
   const { toast } = useToast()
@@ -21,10 +22,10 @@ export function InvitationList() {
         title: "Invitation accepted",
         description: "You have joined the project",
       })
-    } catch {
+    } catch (err) {
       toast({
         title: "Error",
-        description: "Failed to accept invitation",
+        description: getApiErrorMessage(err, "Failed to accept invitation"),
         variant: "destructive",
       })
     }
@@ -37,10 +38,10 @@ export function InvitationList() {
         title: "Invitation declined",
         description: "You have declined the invitation",
       })
-    } catch {
+    } catch (err) {
       toast({
         title: "Error",
-        description: "Failed to decline invitation",
+        description: getApiErrorMessage(err, "Failed to decline invitation"),
         variant: "destructive",
       })
     }
@@ -60,11 +61,12 @@ export function InvitationList() {
   }
 
   if (error) {
+    const errorMessage = getApiErrorMessage(error, "Failed to load invitations")
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center p-8">
           <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Failed to load invitations</p>
+          <p className="text-muted-foreground">{errorMessage}</p>
         </CardContent>
       </Card>
     )

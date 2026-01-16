@@ -22,11 +22,14 @@ import { useChannelMessages, useDeleteMessage, useEditMessage, useSendMessage, m
 import { useQueryClient } from "@tanstack/react-query"
 import { Hash, MessageSquare, Users } from "lucide-react"
 import { useChannelEvents } from "@/hooks/use-websocket"
+import { getApiErrorMessage } from "@/lib/api/error"
+import { useToast } from "@/hooks/use-toast"
 
 export default function MessagesPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects()
   const { data: tasks = [], isLoading: tasksLoading, error: tasksError } = useUserTasks()
   const projectIds = useMemo(() => projects.map((project) => project.id), [projects])
@@ -66,12 +69,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (projectsError || tasksError || channelsError) {
-      const errorMessage =
-        (projectsError instanceof Error && projectsError.message) ||
-        (tasksError instanceof Error && tasksError.message) ||
-        (channelsError instanceof Error && channelsError.message) ||
-        "Failed to load data"
-      setError(errorMessage)
+      setError(getApiErrorMessage(projectsError || tasksError || channelsError, "Failed to load data"))
     }
   }, [projectsError, tasksError, channelsError])
 
@@ -85,19 +83,39 @@ export default function MessagesPage() {
     try {
       await sendMessageMutation({ channelId: activeChannel.id, content })
     } catch (sendError) {
-      console.error("Failed to send message:", sendError)
+      toast({
+        title: "Message not sent",
+        description: getApiErrorMessage(sendError, "Failed to send message"),
+        variant: "destructive",
+      })
     }
   }
 
   const handleEditMessage = async (messageId: string, content: string) => {
-    await editMessageMutation({ messageId, content })
+    try {
+      await editMessageMutation({ messageId, content })
+    } catch (err) {
+      toast({
+        title: "Update failed",
+        description: getApiErrorMessage(err, "Failed to update message"),
+        variant: "destructive",
+      })
+    }
   }
 
   const handleDeleteMessage = async (messageId: string) => {
     if (confirm("Are you sure you want to delete this message?")) {
       const message = messages.find((msg) => msg.id === messageId)
       if (!message) return
-      await deleteMessageMutation(message)
+      try {
+        await deleteMessageMutation(message)
+      } catch (err) {
+        toast({
+          title: "Delete failed",
+          description: getApiErrorMessage(err, "Failed to delete message"),
+          variant: "destructive",
+        })
+      }
     }
   }
 

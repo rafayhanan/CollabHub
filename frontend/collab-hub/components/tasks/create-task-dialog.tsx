@@ -23,6 +23,7 @@ import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import type { Task, Project } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
+import { getApiErrorMessage } from "@/lib/api/error"
 
 interface CreateTaskDialogProps {
   open: boolean
@@ -85,7 +86,7 @@ export function CreateTaskDialog({
       setDueDate(undefined)
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create task")
+      setError(getApiErrorMessage(err, "Failed to create task"))
     } finally {
       setIsLoading(false)
     }

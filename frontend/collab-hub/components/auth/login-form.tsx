@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { login } from "@/lib/api/services/auth"
 import { setAccessToken } from "@/lib/api/token"
+import { getApiErrorMessage } from "@/lib/api/error"
 import { useAuth } from "@/hooks/use-auth"
 import { Loader2 } from "lucide-react"
 
@@ -33,7 +34,7 @@ export function LoginForm() {
       setUser(response.user)
       router.push("/dashboard")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      setError(getApiErrorMessage(err, "Login failed"))
     } finally {
       setIsLoading(false)
     }

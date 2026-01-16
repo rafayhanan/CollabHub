@@ -2,11 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Search, Bell, Plus, Settings, LogOut } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
+import { useToast } from "@/hooks/use-toast"
 
 interface DashboardHeaderProps {
   onCreateProject: () => void
@@ -14,6 +14,14 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onCreateProject }: DashboardHeaderProps) {
   const { user, logout } = useAuth()
+  const { toast } = useToast()
+
+  const handleNotifications = () => {
+    toast({
+      title: "Notifications",
+      description: "Notifications are not available yet.",
+    })
+  }
 
   return (
     <header className="border-b border-border bg-background">
@@ -34,14 +42,8 @@ export function DashboardHeader({ onCreateProject }: DashboardHeaderProps) {
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative">
+          <Button variant="ghost" size="sm" className="relative" onClick={handleNotifications}>
             <Bell className="h-4 w-4" />
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-            >
-              3
-            </Badge>
           </Button>
 
           {/* User Menu */}

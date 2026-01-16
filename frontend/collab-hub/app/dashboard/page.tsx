@@ -15,6 +15,7 @@ import type { Project } from "@/lib/api/types"
 import { useCreateProject, useDeleteProject, useProjects } from "@/hooks/use-projects"
 import { useUserTasks } from "@/hooks/use-tasks"
 import { Plus, CheckSquare, Clock, AlertCircle, TrendingUp } from "lucide-react"
+import { getApiErrorMessage } from "@/lib/api/error"
 
 export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
@@ -40,11 +41,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (projectsError || tasksError) {
-      const errorMessage =
-        (projectsError instanceof Error && projectsError.message) ||
-        (tasksError instanceof Error && tasksError.message) ||
-        "Failed to load dashboard data"
-      setError(errorMessage)
+      setError(getApiErrorMessage(projectsError || tasksError, "Failed to load dashboard data"))
     }
   }, [projectsError, tasksError])
 

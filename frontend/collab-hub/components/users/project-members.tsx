@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { InviteUserDialog } from "./invite-user-dialog"
 import { useProject } from "@/hooks/use-projects"
 import type { ProjectMember } from "@/lib/api/types"
+import { getApiErrorMessage } from "@/lib/api/error"
 
 interface ProjectMembersProps {
   projectId: string
@@ -25,7 +26,7 @@ export function ProjectMembers({ projectId, isOwner }: ProjectMembersProps) {
     if (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch project members",
+        description: getApiErrorMessage(error, "Failed to fetch project members"),
         variant: "destructive",
       })
     }
