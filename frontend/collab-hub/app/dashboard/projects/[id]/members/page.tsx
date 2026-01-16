@@ -1,33 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 import { useParams } from "next/navigation"
 import { ProjectMembers } from "@/components/users/project-members"
-import { projectApi, type Project } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
+import { useProject } from "@/hooks/use-projects"
 
 export default function ProjectMembersPage() {
   const params = useParams()
   const { user } = useAuth()
-  const [project, setProject] = useState<Project | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        const projectData = await projectApi.getProject(params.id as string)
-        setProject(projectData)
-      } catch (error) {
-        console.error("Failed to fetch project:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    if (params.id) {
-      fetchProject()
-    }
-  }, [params.id])
+  const projectId = typeof params.id === "string" ? params.id : null
+  const { data: project, isLoading } = useProject(projectId)
+  const isOwner = useMemo(
+    () => project?.members?.some((m) => m.userId === user?.id && m.role === "OWNER") || false,
+    [project, user],
+  )
 
   if (isLoading) {
     return (
@@ -40,8 +27,6 @@ export default function ProjectMembersPage() {
   if (!project) {
     return <div>Project not found</div>
   }
-
-  const isOwner = project.members?.some((m) => m.userId === user?.id && m.role === "OWNER") || false
 
   return (
     <div className="space-y-6">

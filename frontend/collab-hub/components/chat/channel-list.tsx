@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Hash, Lock, Megaphone, MessageSquare, MoreHorizontal, Plus, Users } from "lucide-react"
-import type { Channel } from "@/lib/api"
+import type { Channel } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 interface ChannelListProps {

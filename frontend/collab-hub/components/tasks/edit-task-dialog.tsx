@@ -21,7 +21,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
-import type { Task } from "@/lib/api"
+import type { Task } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 interface EditTaskDialogProps {

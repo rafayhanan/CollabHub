@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
@@ -14,38 +14,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TypingIndicator } from "@/components/chat/typing-indicator"
-import {
-  getProjects,
-  getUserTasks,
-  getProjectChannels,
-  getChannelMessages,
-  sendMessage,
-  editMessage,
-  deleteMessage,
-  createChannel,
-  createProject,
-  type Project,
-  type Task,
-  type Channel,
-  type Message,
-} from "@/lib/api"
+import type { Channel, Message } from "@/lib/api/types"
+import { useProjects, useCreateProject } from "@/hooks/use-projects"
+import { useUserTasks } from "@/hooks/use-tasks"
+import { useAllProjectChannels, useCreateChannel } from "@/hooks/use-channels"
+import { useChannelMessages, useDeleteMessage, useEditMessage, useSendMessage, messageKeys } from "@/hooks/use-messages"
+import { useQueryClient } from "@tanstack/react-query"
 import { Hash, MessageSquare, Users } from "lucide-react"
 import { useChannelEvents } from "@/hooks/use-websocket"
 
 export default function MessagesPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [channels, setChannels] = useState<Channel[]>([])
-  const [messages, setMessages] = useState<Message[]>([])
+  const queryClient = useQueryClient()
+  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects()
+  const { data: tasks = [], isLoading: tasksLoading, error: tasksError } = useUserTasks()
+  const projectIds = useMemo(() => projects.map((project) => project.id), [projects])
+  const {
+    data: channels = [],
+    isLoading: channelsLoading,
+    error: channelsError,
+  } = useAllProjectChannels(projectIds)
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null)
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; userName: string }>>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isMessagesLoading, setIsMessagesLoading] = useState(false)
   const [isCreateChannelDialogOpen, setIsCreateChannelDialogOpen] = useState(false)
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false)
   const [error, setError] = useState("")
+  const { mutateAsync: createProjectMutation } = useCreateProject()
+  const { mutateAsync: createChannelMutation } = useCreateChannel()
+  const { data: messages = [], isLoading: messagesLoading } = useChannelMessages(activeChannel?.id || null)
+  const { mutateAsync: sendMessageMutation } = useSendMessage()
+  const { mutateAsync: editMessageMutation } = useEditMessage()
+  const { mutateAsync: deleteMessageMutation } = useDeleteMessage()
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -54,60 +54,26 @@ export default function MessagesPage() {
     }
 
     if (isAuthenticated) {
-      loadInitialData()
+      setError("")
     }
   }, [isAuthenticated, authLoading, router])
 
   useEffect(() => {
-    if (activeChannel) {
-      loadChannelMessages(activeChannel.id)
+    if (channels.length > 0 && !activeChannel) {
+      setActiveChannel(channels[0])
     }
-  }, [activeChannel])
+  }, [channels, activeChannel])
 
-  const loadInitialData = async () => {
-    try {
-      setIsLoading(true)
-      const [projectsData, tasksData] = await Promise.all([getProjects(), getUserTasks()])
-      setProjects(projectsData)
-      setTasks(tasksData)
-
-      // Load channels for all projects
-      if (projectsData.length > 0) {
-        const allChannels: Channel[] = []
-        for (const project of projectsData) {
-          try {
-            const projectChannels = await getProjectChannels(project.id)
-            allChannels.push(...projectChannels)
-          } catch (err) {
-            console.error(`Failed to load channels for project ${project.id}:`, err)
-          }
-        }
-        setChannels(allChannels)
-
-        // Select first channel if available
-        if (allChannels.length > 0) {
-          setActiveChannel(allChannels[0])
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data")
-    } finally {
-      setIsLoading(false)
+  useEffect(() => {
+    if (projectsError || tasksError || channelsError) {
+      const errorMessage =
+        (projectsError instanceof Error && projectsError.message) ||
+        (tasksError instanceof Error && tasksError.message) ||
+        (channelsError instanceof Error && channelsError.message) ||
+        "Failed to load data"
+      setError(errorMessage)
     }
-  }
-
-  const loadChannelMessages = async (channelId: string) => {
-    try {
-      setIsMessagesLoading(true)
-      const messagesData = await getChannelMessages(channelId)
-      setMessages(messagesData)
-    } catch (err) {
-      console.error("Failed to load messages:", err)
-      setMessages([])
-    } finally {
-      setIsMessagesLoading(false)
-    }
-  }
+  }, [projectsError, tasksError, channelsError])
 
   const handleChannelSelect = (channel: Channel) => {
     setActiveChannel(channel)
@@ -116,35 +82,22 @@ export default function MessagesPage() {
   const handleSendMessage = async (content: string) => {
     if (!activeChannel) return
 
-    const tempMessage = {
-      id: `temp-${Date.now()}`,
-      content,
-      channelId: activeChannel.id,
-      authorId: "current-user", // This would be the actual user ID
-      author: { id: "current-user", name: "You", email: "" },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    setMessages((prev) => [...prev, tempMessage])
-
     try {
-      const newMessage = await sendMessage(activeChannel.id, content)
-      setMessages((prev) => prev.map((msg) => (msg.id === tempMessage.id ? newMessage : msg)))
-    } catch (error) {
-      setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id))
-      console.error("Failed to send message:", error)
+      await sendMessageMutation({ channelId: activeChannel.id, content })
+    } catch (sendError) {
+      console.error("Failed to send message:", sendError)
     }
   }
 
   const handleEditMessage = async (messageId: string, content: string) => {
-    const updatedMessage = await editMessage(messageId, content)
-    setMessages((prev) => prev.map((msg) => (msg.id === messageId ? updatedMessage : msg)))
+    await editMessageMutation({ messageId, content })
   }
 
   const handleDeleteMessage = async (messageId: string) => {
     if (confirm("Are you sure you want to delete this message?")) {
-      await deleteMessage(messageId)
-      setMessages((prev) => prev.filter((msg) => msg.id !== messageId))
+      const message = messages.find((msg) => msg.id === messageId)
+      if (!message) return
+      await deleteMessageMutation(message)
     }
   }
 
@@ -155,25 +108,30 @@ export default function MessagesPage() {
     projectId?: string,
     taskId?: string,
   ) => {
-    const newChannel = await createChannel(name, type, description, projectId, taskId)
-    setChannels((prev) => [newChannel, ...prev])
+    const newChannel = await createChannelMutation({ name, type, description, projectId, taskId })
     setActiveChannel(newChannel)
   }
 
   const handleCreateProject = async (name: string, description: string) => {
-    const newProject = await createProject(name, description)
-    setProjects((prev) => [newProject, ...prev])
+    await createProjectMutation({ name, description })
   }
 
   useChannelEvents(activeChannel?.id || null, {
     onMessageCreated: (message) => {
-      setMessages((prev) => [...prev, message])
+      queryClient.setQueryData<Message[]>(messageKeys.channel(message.channelId), (old) =>
+        old ? [...old, message] : [message],
+      )
     },
     onMessageUpdated: (updatedMessage) => {
-      setMessages((prev) => prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg)))
+      queryClient.setQueryData<Message[]>(messageKeys.channel(updatedMessage.channelId), (old) =>
+        old ? old.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg)) : old,
+      )
     },
     onMessageDeleted: (messageId) => {
-      setMessages((prev) => prev.filter((msg) => msg.id !== messageId))
+      if (!activeChannel) return
+      queryClient.setQueryData<Message[]>(messageKeys.channel(activeChannel.id), (old) =>
+        old ? old.filter((msg) => msg.id !== messageId) : old,
+      )
     },
     onTypingStart: (userId, userName) => {
       setTypingUsers((prev) => {
@@ -186,7 +144,7 @@ export default function MessagesPage() {
     },
   })
 
-  if (authLoading || isLoading) {
+  if (authLoading || projectsLoading || tasksLoading || channelsLoading) {
     return (
       <div className="flex h-screen">
         <div className="w-64 border-r bg-sidebar">
@@ -260,7 +218,7 @@ export default function MessagesPage() {
                   messages={messages}
                   onEditMessage={handleEditMessage}
                   onDeleteMessage={handleDeleteMessage}
-                  isLoading={isMessagesLoading}
+                  isLoading={messagesLoading}
                 />
 
                 <TypingIndicator typingUsers={typingUsers} />

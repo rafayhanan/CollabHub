@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
-import type { Channel, Project, Task } from "@/lib/api"
+import type { Channel, Project, Task } from "@/lib/api/types"
 
 interface CreateChannelDialogProps {
   open: boolean

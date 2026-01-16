@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MoreHorizontal, Users, CheckSquare, Calendar, MessageSquare } from "lucide-react"
 import Link from "next/link"
-import type { Project } from "@/lib/api"
+import type { Project } from "@/lib/api/types"
 
 interface ProjectCardProps {
   project: Project & {

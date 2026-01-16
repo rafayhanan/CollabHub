@@ -5,13 +5,18 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/hooks/use-auth"
 import { ThemeProvider } from "@/components/theme-provider"
+import { QueryProvider } from "@/components/query-provider"
 import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "CollabHub",
+  description: "Project Management Platform",
+  generator: "CollabHub",
+  icons: {
+    icon: "/collab-hub-logo.svg",
+    apple: "/collab-hub-logo.svg",
+  },
 }
 
 export default function RootLayout({
@@ -23,14 +28,16 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Suspense fallback={null}>
-          <ThemeProvider 
-            attribute="class" 
-            defaultTheme="system" 
-            enableSystem 
-            disableTransitionOnChange
-          >
-            <AuthProvider>{children}</AuthProvider>
-          </ThemeProvider>
+          <QueryProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <AuthProvider>{children}</AuthProvider>
+            </ThemeProvider>
+          </QueryProvider>
         </Suspense>
         <Analytics />
       </body>

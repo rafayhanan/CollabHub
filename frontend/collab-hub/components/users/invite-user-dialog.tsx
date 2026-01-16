@@ -16,8 +16,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { UserPlus, Loader2 } from "lucide-react"
-import { invitationApi } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { useSendInvitation } from "@/hooks/use-invitations"
 
 interface InviteUserDialogProps {
   projectId: string
@@ -29,6 +29,7 @@ export function InviteUserDialog({ projectId, onInviteSent }: InviteUserDialogPr
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+  const { mutateAsync: sendInvitation } = useSendInvitation()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,7 +37,7 @@ export function InviteUserDialog({ projectId, onInviteSent }: InviteUserDialogPr
 
     setIsLoading(true)
     try {
-      await invitationApi.sendInvitation(projectId, email)
+      await sendInvitation({ projectId, email })
       toast({
         title: "Invitation sent",
         description: `Invitation sent to ${email}`,

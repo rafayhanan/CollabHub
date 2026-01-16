@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useCallback } from "react"
-import { wsManager, type WebSocketEvent, type WebSocketEventHandler } from "@/lib/websocket"
+import { wsManager, type WebSocketEvent, type WebSocketEventHandler } from "@/lib/realtime/websocket"
 
 export function useWebSocket(handler?: WebSocketEventHandler) {
   useEffect(() => {
