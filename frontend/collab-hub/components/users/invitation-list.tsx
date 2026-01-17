@@ -1,10 +1,10 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Check, X, Mail, Clock } from "lucide-react"
+import { Check, X, Mail, Clock, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAcceptInvitation, useDeclineInvitation, useInvitations } from "@/hooks/use-invitations"
 import { getApiErrorMessage } from "@/lib/api/error"
@@ -14,8 +14,10 @@ export function InvitationList() {
   const { data: invitations = [], isLoading, error } = useInvitations()
   const { mutateAsync: acceptInvitation } = useAcceptInvitation()
   const { mutateAsync: declineInvitation } = useDeclineInvitation()
+  const [actionState, setActionState] = useState<{ id: string; type: "accept" | "decline" } | null>(null)
 
   const handleAccept = async (invitationId: string) => {
+    setActionState({ id: invitationId, type: "accept" })
     try {
       await acceptInvitation(invitationId)
       toast({
@@ -28,10 +30,13 @@ export function InvitationList() {
         description: getApiErrorMessage(err, "Failed to accept invitation"),
         variant: "destructive",
       })
+    } finally {
+      setActionState(null)
     }
   }
 
   const handleDecline = async (invitationId: string) => {
+    setActionState({ id: invitationId, type: "decline" })
     try {
       await declineInvitation(invitationId)
       toast({
@@ -44,6 +49,8 @@ export function InvitationList() {
         description: getApiErrorMessage(err, "Failed to decline invitation"),
         variant: "destructive",
       })
+    } finally {
+      setActionState(null)
     }
   }
 
@@ -103,13 +110,32 @@ export function InvitationList() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button size="sm" onClick={() => handleAccept(invitation.id)} className="gap-2 w-full sm:w-auto">
-                <Check className="h-4 w-4" />
-                Accept
+              <Button
+                size="sm"
+                onClick={() => handleAccept(invitation.id)}
+                className="gap-2 w-full sm:w-auto"
+                disabled={actionState?.id === invitation.id}
+              >
+                {actionState?.id === invitation.id && actionState.type === "accept" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                {actionState?.id === invitation.id && actionState.type === "accept" ? "Accepting..." : "Accept"}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => handleDecline(invitation.id)} className="gap-2 w-full sm:w-auto">
-                <X className="h-4 w-4" />
-                Decline
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDecline(invitation.id)}
+                className="gap-2 w-full sm:w-auto"
+                disabled={actionState?.id === invitation.id}
+              >
+                {actionState?.id === invitation.id && actionState.type === "decline" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <X className="h-4 w-4" />
+                )}
+                {actionState?.id === invitation.id && actionState.type === "decline" ? "Declining..." : "Decline"}
               </Button>
             </div>
           </CardContent>

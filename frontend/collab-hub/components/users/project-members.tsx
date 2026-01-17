@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Crown } from "lucide-react"
+import { Users, Crown, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { InviteUserDialog } from "./invite-user-dialog"
 import { useProject, useUpdateMemberRole } from "@/hooks/use-projects"
@@ -27,6 +27,8 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
   const { data: invitations = [] } = useProjectInvitations(projectId, isOwner)
   const { mutateAsync: resendInvitationMutation } = useResendInvitation()
   const members = useMemo<ProjectMember[]>(() => project?.members || [], [project])
+  const [roleUpdatingId, setRoleUpdatingId] = useState<string | null>(null)
+  const [resendLoadingId, setResendLoadingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (error) {
@@ -50,6 +52,7 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
   }
 
   const handleRoleChange = async (member: ProjectMember, role: "MANAGER" | "MEMBER") => {
+    setRoleUpdatingId(member.userId)
     try {
       await updateMemberRoleMutation({ projectId, userId: member.userId, role })
       toast({
@@ -62,10 +65,13 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
         description: getApiErrorMessage(err, "Failed to update member role"),
         variant: "destructive",
       })
+    } finally {
+      setRoleUpdatingId(null)
     }
   }
 
   const handleResendInvitation = async (invitationId: string, email: string) => {
+    setResendLoadingId(invitationId)
     try {
       await resendInvitationMutation({ projectId, invitationId })
       toast({
@@ -78,6 +84,8 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
         description: getApiErrorMessage(err, "Failed to resend invitation"),
         variant: "destructive",
       })
+    } finally {
+      setResendLoadingId(null)
     }
   }
 
@@ -136,19 +144,24 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
                   {member.role}
                 </Badge>
                 {isOwner && member.role !== "OWNER" ? (
-                  <Select
-                    value={member.role}
-                    onValueChange={(value) => handleRoleChange(member, value as "MANAGER" | "MEMBER")}
-                    disabled={member.userId === currentUserId}
-                  >
-                    <SelectTrigger className="h-8 w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="MANAGER">Manager</SelectItem>
-                      <SelectItem value="MEMBER">Member</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select
+                      value={member.role}
+                      onValueChange={(value) => handleRoleChange(member, value as "MANAGER" | "MEMBER")}
+                      disabled={member.userId === currentUserId || roleUpdatingId === member.userId}
+                    >
+                      <SelectTrigger className="h-8 w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MANAGER">Manager</SelectItem>
+                        <SelectItem value="MEMBER">Member</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {roleUpdatingId === member.userId ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : null}
+                  </>
                 ) : null}
                 {/* Remove member button hidden - backend endpoint not implemented yet */}
               </div>
@@ -176,9 +189,18 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
                     size="sm"
                     variant="outline"
                     onClick={() => handleResendInvitation(invitation.id, invitation.invitedUserEmail)}
-                    disabled={invitation.emailStatus === "QUEUED"}
+                    disabled={invitation.emailStatus === "QUEUED" || resendLoadingId === invitation.id}
                   >
-                    {invitation.emailStatus === "QUEUED" ? "Queued" : "Resend"}
+                    {resendLoadingId === invitation.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        Resending...
+                      </>
+                    ) : invitation.emailStatus === "QUEUED" ? (
+                      "Queued"
+                    ) : (
+                      "Resend"
+                    )}
                   </Button>
                 </div>
               ))}

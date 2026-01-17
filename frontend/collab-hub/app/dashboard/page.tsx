@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { Project } from "@/lib/api/types"
 import { useCreateProject, useDeleteProject, useProjects } from "@/hooks/use-projects"
 import { useAllProjectTasks, useUserTasks } from "@/hooks/use-tasks"
-import { Plus, CheckSquare, Clock, AlertCircle, TrendingUp } from "lucide-react"
+import { Plus, CheckSquare, Clock, AlertCircle, TrendingUp, Loader2 } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/api/error"
 import { useToast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
@@ -68,6 +68,7 @@ export default function DashboardPage() {
   const { toast } = useToast()
   const { mutateAsync: createProjectMutation } = useCreateProject()
   const { mutateAsync: deleteProjectMutation } = useDeleteProject()
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -100,9 +101,24 @@ export default function DashboardPage() {
       action: (
         <ToastAction
           altText="Confirm delete"
-          onClick={() => deleteProjectMutation(project.id)}
+          onClick={async () => {
+            setDeletingProjectId(project.id)
+            try {
+              await deleteProjectMutation(project.id)
+            } finally {
+              setDeletingProjectId(null)
+            }
+          }}
+          disabled={deletingProjectId === project.id}
         >
-          Delete
+          {deletingProjectId === project.id ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Deleting...
+            </span>
+          ) : (
+            "Delete"
+          )}
         </ToastAction>
       ),
     })

@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { Check } from "lucide-react"
+import { Check, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from "@/hooks/use-notifications"
@@ -10,8 +11,10 @@ import { getApiErrorMessage } from "@/lib/api/error"
 
 export function NotificationList() {
   const { data: notifications = [], isLoading, error } = useNotifications()
-  const { mutate: markRead } = useMarkNotificationRead()
-  const { mutate: markAllRead } = useMarkAllNotificationsRead()
+  const { mutateAsync: markRead } = useMarkNotificationRead()
+  const { mutateAsync: markAllRead } = useMarkAllNotificationsRead()
+  const [loadingNotificationId, setLoadingNotificationId] = useState<string | null>(null)
+  const [markAllLoading, setMarkAllLoading] = useState(false)
 
   const unreadCount = notifications.filter((notification) => !notification.readAt).length
 
@@ -38,9 +41,22 @@ export function NotificationList() {
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>Notifications</CardTitle>
         {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={() => markAllRead()} className="gap-2 w-full sm:w-auto">
-            <Check className="h-4 w-4" />
-            Mark all read
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              setMarkAllLoading(true)
+              try {
+                await markAllRead()
+              } finally {
+                setMarkAllLoading(false)
+              }
+            }}
+            className="gap-2 w-full sm:w-auto"
+            disabled={markAllLoading}
+          >
+            {markAllLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {markAllLoading ? "Marking..." : "Mark all read"}
           </Button>
         )}
       </CardHeader>
@@ -70,8 +86,28 @@ export function NotificationList() {
                   )}
                 </div>
                 {!notification.readAt && (
-                  <Button variant="ghost" size="sm" onClick={() => markRead(notification.id)} className="w-full sm:w-auto">
-                    Mark read
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      setLoadingNotificationId(notification.id)
+                      try {
+                        await markRead(notification.id)
+                      } finally {
+                        setLoadingNotificationId(null)
+                      }
+                    }}
+                    className="w-full sm:w-auto"
+                    disabled={loadingNotificationId === notification.id}
+                  >
+                    {loadingNotificationId === notification.id ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Marking...
+                      </span>
+                    ) : (
+                      "Mark read"
+                    )}
                   </Button>
                 )}
               </div>
