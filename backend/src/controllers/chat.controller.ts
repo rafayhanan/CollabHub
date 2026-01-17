@@ -406,6 +406,10 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'You are not a member of this channel' });
     }
 
+    if (channel.type === 'ANNOUNCEMENTS' && channelMember.role !== CHANNEL_ROLES.ADMIN) {
+      return res.status(403).json({ error: 'Only owners and managers can post in announcements' });
+    }
+
     const message = await prisma.message.create({
       data: {
         content,

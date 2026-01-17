@@ -20,9 +20,10 @@ interface ProjectCardProps {
   }
   onEdit: (project: Project) => void
   onDelete: (project: Project) => void
+  canDelete?: boolean
 }
 
-export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
+export function ProjectCard({ project, onEdit, onDelete, canDelete = false }: ProjectCardProps) {
   const completionRate = project.taskStats
     ? Math.round((project.taskStats.completed / project.taskStats.total) * 100) || 0
     : 0
@@ -39,19 +40,21 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
             </CardTitle>
             <CardDescription className="text-sm text-pretty">{project.description}</CardDescription>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(project)}>Edit Project</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDelete(project)} className="text-destructive">
-                Delete Project
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canDelete ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onEdit(project)}>Edit Project</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDelete(project)} className="text-destructive">
+                  Delete Project
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </CardHeader>
 
@@ -125,7 +128,7 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
               Tasks
             </Button>
           </Link>
-          <Link href={`/dashboard/projects/${project.id}/chat`} className="flex-1">
+          <Link href={`/dashboard/messages?projectId=${project.id}`} className="flex-1">
             <Button variant="outline" size="sm" className="w-full bg-transparent">
               <MessageSquare className="h-3 w-3 mr-1" />
               Chat
