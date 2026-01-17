@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { sendInvitation, acceptInvitation, declineInvitation, getInvitations } from '../controllers/invitation.controller';
+import {
+    sendInvitation,
+    acceptInvitation,
+    declineInvitation,
+    getInvitations,
+    getProjectInvitations,
+    resendInvitation,
+} from '../controllers/invitation.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import { sendInvitationSchema } from '../validators/invitation.validator';
@@ -56,6 +63,59 @@ router.get('/invitations', authenticateToken, getInvitations);
  *         description: User is already a member of this project
  */
 router.post('/projects/:projectId/invitations', authenticateToken, validate(sendInvitationSchema), sendInvitation);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/invitations:
+ *   get:
+ *     summary: Get pending invitations for a project (owner only)
+ *     tags: [Invitations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: A list of pending invitations for the project
+ *       '403':
+ *         description: Forbidden
+ *       '404':
+ *         description: Project not found
+ */
+router.get('/projects/:projectId/invitations', authenticateToken, getProjectInvitations);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/invitations/{invitationId}/resend:
+ *   post:
+ *     summary: Resend a pending invitation (owner only)
+ *     tags: [Invitations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: invitationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Invitation resent successfully
+ *       '403':
+ *         description: Forbidden
+ *       '404':
+ *         description: Invitation not found
+ */
+router.post('/projects/:projectId/invitations/:invitationId/resend', authenticateToken, resendInvitation);
 
 /**
  * @openapi

@@ -2,6 +2,7 @@ import { ConnectionOptions, Worker } from 'bullmq';
 import logger from '../utils/logger';
 import { createRedisConnection, isRedisConfigured } from '../config/redis';
 import { INVITATION_QUEUE, InvitationJobPayload } from '../queues/invitation.queue';
+import prisma from '../config/prisma';
 import { getInviteEmailTemplate, isMailerConfigured, sendEmail } from '../utils/mailer';
 
 export const startInvitationWorker = () => {
@@ -36,6 +37,11 @@ export const startInvitationWorker = () => {
                 html: emailTemplate.html,
             });
 
+            await prisma.invitation.update({
+                where: { id: job.data.invitationId },
+                data: { emailStatus: 'SENT', emailLastSentAt: new Date(), emailError: null },
+            });
+
             logger.info(`Invitation email sent to ${job.data.invitedUserEmail}`);
         },
         { connection: connection as ConnectionOptions },
@@ -43,6 +49,16 @@ export const startInvitationWorker = () => {
 
     worker.on('failed', (job, err) => {
         logger.error(`Invitation job failed ${job?.id}: ${err.message}`);
+        if (job?.data?.invitationId) {
+            prisma.invitation
+                .update({
+                    where: { id: job.data.invitationId },
+                    data: { emailStatus: 'FAILED', emailError: err.message },
+                })
+                .catch((updateError) => {
+                    logger.error('Failed to update invitation email status:', updateError);
+                });
+        }
     });
 
     return worker;

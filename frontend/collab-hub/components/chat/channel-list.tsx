@@ -117,7 +117,7 @@ export function ChannelList({
   }
 
   return (
-    <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border bg-card flex flex-col h-full">
+    <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border bg-card flex flex-col h-full min-h-0">
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-card-foreground">Channels</h2>
