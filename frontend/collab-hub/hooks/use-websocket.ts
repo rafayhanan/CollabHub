@@ -22,8 +22,18 @@ export function useWebSocket(handler?: WebSocketEventHandler) {
     wsManager.send(event)
   }, [])
 
+  const joinChannel = useCallback((channelId: string) => {
+    wsManager.joinChannel(channelId)
+  }, [])
+
+  const leaveChannel = useCallback((channelId: string) => {
+    wsManager.leaveChannel(channelId)
+  }, [])
+
   return {
     sendEvent,
+    joinChannel,
+    leaveChannel,
     isConnected: wsManager.isConnected(),
   }
 }
@@ -38,6 +48,7 @@ export function useChannelEvents(
     onTypingStop?: (userId: string) => void
   },
 ) {
+  const { joinChannel, leaveChannel } = useWebSocket()
   const handler = useCallback(
     (event: WebSocketEvent) => {
       switch (event.type) {
@@ -72,6 +83,14 @@ export function useChannelEvents(
   )
 
   useWebSocket(handler)
+
+  useEffect(() => {
+    if (!channelId) return
+    joinChannel(channelId)
+    return () => {
+      leaveChannel(channelId)
+    }
+  }, [channelId, joinChannel, leaveChannel])
 }
 
 export function useTaskEvents(

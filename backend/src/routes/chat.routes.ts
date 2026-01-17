@@ -38,7 +38,7 @@ const router = express.Router();
  *           description: Channel description
  *         type:
  *           type: string
- *           enum: [PROJECT_GENERAL, TASK_SPECIFIC, PRIVATE_DM, ANNOUNCEMENTS]
+ *           enum: [PROJECT_GENERAL, TASK_SPECIFIC, ANNOUNCEMENTS]
  *           description: Channel type
  *         projectId:
  *           type: string
@@ -129,7 +129,7 @@ const router = express.Router();
  *                 description: Channel name
  *               type:
  *                 type: string
- *                 enum: [PROJECT_GENERAL, TASK_SPECIFIC, PRIVATE_DM, ANNOUNCEMENTS]
+ *                 enum: [PROJECT_GENERAL, TASK_SPECIFIC, ANNOUNCEMENTS]
  *               description:
  *                 type: string
  *               projectId:
@@ -138,6 +138,11 @@ const router = express.Router();
  *               taskId:
  *                 type: string
  *                 description: Required for task-specific channels
+ *               memberIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional list of project member IDs to add
  *     responses:
  *       201:
  *         description: Channel created successfully

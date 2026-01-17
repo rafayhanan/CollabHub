@@ -1,6 +1,8 @@
 import { Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../utils/types';
+import { addChannelMembers, getProjectManagerIds } from '../services/channel.service';
+import { emitToChannel } from '../realtime/socket';
 
 // Channel role constants
 const CHANNEL_ROLES = {
@@ -13,7 +15,7 @@ const CHANNEL_ROLES = {
  */
 export const createChannel = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, type, description, projectId, taskId } = req.body;
+    const { name, type, description, projectId, taskId, memberIds = [] } = req.body;
     const userId = (req.user as { sub: string }).sub;
 
     // Verify user has access to the project
@@ -27,6 +29,10 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
 
       if (!userProject) {
         return res.status(403).json({ error: 'Access denied to this project' });
+      }
+
+      if (!['OWNER', 'MANAGER'].includes(userProject.role)) {
+        return res.status(403).json({ error: 'Only project owners or managers can create channels' });
       }
     }
 
@@ -44,7 +50,20 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Create the channel
+    // Validate member IDs are part of the project (if provided)
+    if (projectId && memberIds.length > 0) {
+      const memberRecords = await prisma.userProject.findMany({
+        where: {
+          projectId,
+          userId: { in: memberIds },
+        },
+        select: { userId: true },
+      });
+      if (memberRecords.length !== memberIds.length) {
+        return res.status(400).json({ error: 'One or more selected users are not members of this project' });
+      }
+    }
+
     const channel = await prisma.channel.create({
       data: {
         name,
@@ -52,13 +71,18 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
         description,
         projectId,
         taskId,
-        members: {
-          create: {
-            userId,
-            role: CHANNEL_ROLES.ADMIN,
-          },
-        },
       },
+    });
+
+    const managerIds = projectId ? await getProjectManagerIds(projectId) : [userId];
+    await addChannelMembers({
+      channelId: channel.id,
+      adminUserIds: managerIds,
+      memberUserIds: memberIds,
+    });
+
+    const channelWithMembers = await prisma.channel.findUnique({
+      where: { id: channel.id },
       include: {
         members: {
           include: {
@@ -87,7 +111,7 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.status(201).json(channel);
+    res.status(201).json(channelWithMembers);
   } catch (error) {
     console.error('Error creating channel:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -117,11 +141,15 @@ export const getProjectChannels = async (req: AuthRequest, res: Response) => {
     const channels = await prisma.channel.findMany({
       where: {
         projectId,
-        members: {
-          some: {
-            userId,
-          },
-        },
+        ...(userProject.role === 'OWNER' || userProject.role === 'MANAGER'
+          ? {}
+          : {
+              members: {
+                some: {
+                  userId,
+                },
+              },
+            }),
       },
       include: {
         members: {
@@ -172,11 +200,6 @@ export const getChannel = async (req: AuthRequest, res: Response) => {
     const channel = await prisma.channel.findFirst({
       where: {
         id: channelId,
-        members: {
-          some: {
-            userId,
-          },
-        },
       },
       include: {
         members: {
@@ -213,6 +236,18 @@ export const getChannel = async (req: AuthRequest, res: Response) => {
     });
 
     if (!channel) {
+      return res.status(404).json({ error: 'Channel not found or access denied' });
+    }
+
+    const isMember = channel.members.some((member: any) => member.userId === userId);
+    if (!isMember && channel.projectId) {
+      const projectRole = await prisma.userProject.findFirst({
+        where: { userId, projectId: channel.projectId, role: { in: ['OWNER', 'MANAGER'] } },
+      });
+      if (!projectRole) {
+        return res.status(404).json({ error: 'Channel not found or access denied' });
+      }
+    } else if (!isMember) {
       return res.status(404).json({ error: 'Channel not found or access denied' });
     }
 
@@ -340,13 +375,32 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify user is a member of the channel
-    const channelMember = await prisma.channelMember.findFirst({
+    // Verify user is a member of the channel or a project manager
+    let channelMember = await prisma.channelMember.findFirst({
       where: {
         channelId,
         userId,
       },
     });
+
+    if (!channelMember && channel.projectId) {
+      const projectRole = await prisma.userProject.findFirst({
+        where: { userId, projectId: channel.projectId, role: { in: ['OWNER', 'MANAGER'] } },
+      });
+
+      if (projectRole) {
+        channelMember = await prisma.channelMember.upsert({
+          where: {
+            channelId_userId: {
+              channelId,
+              userId,
+            },
+          },
+          update: { role: CHANNEL_ROLES.ADMIN },
+          create: { channelId, userId, role: CHANNEL_ROLES.ADMIN },
+        });
+      }
+    }
 
     if (!channelMember) {
       return res.status(403).json({ error: 'You are not a member of this channel' });
@@ -377,6 +431,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    emitToChannel(channelId, 'message_created', { channelId, message });
     res.status(201).json(message);
   } catch (error) {
     console.error('Error sending message:', error);
@@ -393,7 +448,12 @@ export const getChannelMessages = async (req: AuthRequest, res: Response) => {
     const { limit = '50', offset = '0' } = req.query;
     const userId = (req.user as { sub: string }).sub;
 
-    // Verify user is a member of the channel
+    // Verify user is a member of the channel or a project manager
+    const channel = await prisma.channel.findUnique({ where: { id: channelId } });
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found' });
+    }
+
     const channelMember = await prisma.channelMember.findFirst({
       where: {
         channelId,
@@ -401,7 +461,14 @@ export const getChannelMessages = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!channelMember) {
+    if (!channelMember && channel.projectId) {
+      const projectRole = await prisma.userProject.findFirst({
+        where: { userId, projectId: channel.projectId, role: { in: ['OWNER', 'MANAGER'] } },
+      });
+      if (!projectRole) {
+        return res.status(403).json({ error: 'You are not a member of this channel' });
+      }
+    } else if (!channelMember) {
       return res.status(403).json({ error: 'You are not a member of this channel' });
     }
 
@@ -481,6 +548,7 @@ export const updateMessage = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    emitToChannel(updatedMessage.channelId, 'message_updated', { channelId: updatedMessage.channelId, message: updatedMessage });
     res.json(updatedMessage);
   } catch (error) {
     console.error('Error updating message:', error);
@@ -534,6 +602,7 @@ export const deleteMessage = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    emitToChannel(message.channelId, 'message_deleted', { channelId: message.channelId, messageId });
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting message:', error);

@@ -4,6 +4,7 @@ import { AuthRequest } from '../utils/types';
 import logger from '../utils/logger';
 import { invitationQueue } from '../queues/invitation.queue';
 import { createNotification } from '../utils/notifications';
+import { addUserToDefaultChannels } from '../services/channel.service';
 
 export const getInvitations = async (req: AuthRequest, res: Response) => {
     const userId = (req.user as { sub: string }).sub;
@@ -175,6 +176,8 @@ export const acceptInvitation = async (req: AuthRequest, res: Response) => {
                 },
             });
         });
+
+        await addUserToDefaultChannels({ projectId: invitation.projectId, userId });
 
         const project = await prisma.project.findUnique({
             where: { id: invitation.projectId },

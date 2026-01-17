@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Hash, Lock, Megaphone, MessageSquare, MoreHorizontal, Plus, Users } from "lucide-react"
+import { Hash, Megaphone, MessageSquare, MoreHorizontal, Plus, Users } from "lucide-react"
 import type { Channel } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
@@ -31,8 +31,6 @@ export function ChannelList({
         return Hash
       case "TASK_SPECIFIC":
         return MessageSquare
-      case "PRIVATE_DM":
-        return Lock
       case "ANNOUNCEMENTS":
         return Megaphone
       default:
@@ -49,7 +47,6 @@ export function ChannelList({
       PROJECT_GENERAL: [] as Channel[],
       ANNOUNCEMENTS: [] as Channel[],
       TASK_SPECIFIC: [] as Channel[],
-      PRIVATE_DM: [] as Channel[],
     },
   )
 
@@ -133,7 +130,6 @@ export function ChannelList({
           {renderChannelGroup("Announcements", groupedChannels.ANNOUNCEMENTS)}
           {renderChannelGroup("General", groupedChannels.PROJECT_GENERAL)}
           {renderChannelGroup("Tasks", groupedChannels.TASK_SPECIFIC)}
-          {renderChannelGroup("Direct Messages", groupedChannels.PRIVATE_DM)}
         </div>
 
         {channels.length === 0 && (

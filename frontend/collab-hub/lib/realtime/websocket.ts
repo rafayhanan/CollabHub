@@ -1,3 +1,4 @@
+import { io, type Socket } from "socket.io-client"
 import { getAccessToken } from "../api/token"
 
 type MessagePayload = Record<string, unknown>
@@ -19,16 +20,13 @@ export type WebSocketEvent =
 export type WebSocketEventHandler = (event: WebSocketEvent) => void
 
 class WebSocketManager {
-  private ws: WebSocket | null = null
-  private reconnectAttempts = 0
-  private maxReconnectAttempts = 5
-  private reconnectDelay = 1000
+  private socket: Socket | null = null
   private eventHandlers: Set<WebSocketEventHandler> = new Set()
   private isConnecting = false
   private shouldReconnect = true
 
   connect() {
-    if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
+    if (this.socket?.connected || this.isConnecting) {
       return
     }
 
@@ -36,67 +34,67 @@ class WebSocketManager {
     const token = getAccessToken()
 
     if (!token) {
-      console.warn("[WebSocket] No auth token available")
+      console.warn("[Socket.io] No auth token available")
       this.isConnecting = false
       return
     }
 
     try {
-      // Connect to WebSocket server with auth token
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:5000/ws"
-      this.ws = new WebSocket(`${wsUrl}?token=${token}`)
+      const baseUrl = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+      const path = process.env.NEXT_PUBLIC_WS_PATH || "/socket.io"
 
-      this.ws.onopen = () => {
-        console.log("[WebSocket] Connected")
+      this.socket = io(baseUrl, {
+        path,
+        auth: { token },
+        autoConnect: true,
+        reconnection: true,
+      })
+
+      this.socket.on("connect", () => {
+        console.log("[Socket.io] Connected")
         this.isConnecting = false
-        this.reconnectAttempts = 0
-      }
+      })
 
-      this.ws.onmessage = (event) => {
-        try {
-          const wsEvent: WebSocketEvent = JSON.parse(event.data)
-          this.eventHandlers.forEach((handler) => handler(wsEvent))
-        } catch (error) {
-          console.error("[WebSocket] Failed to parse message:", error)
-        }
-      }
-
-      this.ws.onclose = (event) => {
-        console.log("[WebSocket] Disconnected:", event.code, event.reason)
+      this.socket.on("connect_error", (error) => {
+        console.error("[Socket.io] Connection error:", error)
         this.isConnecting = false
-        this.ws = null
+      })
 
-        if (this.shouldReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
-          this.reconnectAttempts++
-          const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1)
-          console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`)
-          setTimeout(() => this.connect(), delay)
-        }
-      }
-
-      this.ws.onerror = (error) => {
-        console.error("[WebSocket] Error:", error)
-        this.isConnecting = false
-      }
+      this.socket.onAny((event, data) => {
+        const wsEvent = { type: event, data } as WebSocketEvent
+        this.eventHandlers.forEach((handler) => handler(wsEvent))
+      })
     } catch (error) {
-      console.error("[WebSocket] Failed to connect:", error)
+      console.error("[Socket.io] Failed to connect:", error)
       this.isConnecting = false
     }
   }
 
   disconnect() {
     this.shouldReconnect = false
-    if (this.ws) {
-      this.ws.close()
-      this.ws = null
+    if (this.socket) {
+      this.socket.disconnect()
+      this.socket = null
     }
   }
 
   send(event: { type: string; data: unknown }) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(event))
+    if (this.socket?.connected) {
+      this.socket.emit(event.type, event.data)
     } else {
-      console.warn("[WebSocket] Cannot send message - not connected")
+      console.warn("[Socket.io] Cannot send message - not connected")
+    }
+  }
+
+  joinChannel(channelId: string) {
+    if (this.socket?.connected) {
+      this.socket.emit("join_channel", { channelId })
+    }
+  }
+
+  leaveChannel(channelId: string) {
+    if (this.socket?.connected) {
+      this.socket.emit("leave_channel", { channelId })
     }
   }
 
@@ -106,7 +104,7 @@ class WebSocketManager {
   }
 
   isConnected() {
-    return this.ws?.readyState === WebSocket.OPEN
+    return Boolean(this.socket?.connected)
   }
 }
 
