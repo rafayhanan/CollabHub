@@ -18,6 +18,9 @@ interface KanbanColumnProps {
   onTaskEdit: (task: Task) => void
   onTaskDelete: (task: Task) => void
   onTaskStatusChange: (task: Task, newStatus: Task["status"]) => void
+  canManageTask: (task: Task) => boolean
+  canDeleteTask: (task: Task) => boolean
+  canCreateTask: boolean
   onCreateTask: (status: Task["status"]) => void
   color?: string
 }
@@ -29,6 +32,9 @@ export function KanbanColumn({
   onTaskEdit,
   onTaskDelete,
   onTaskStatusChange,
+  canManageTask,
+  canDeleteTask,
+  canCreateTask,
   onCreateTask,
   color = "bg-muted",
 }: KanbanColumnProps) {
@@ -53,9 +59,11 @@ export function KanbanColumn({
               {tasks.length}
             </Badge>
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => onCreateTask(status)} className="h-6 w-6 p-0">
-            <Plus className="h-3 w-3" />
-          </Button>
+          {canCreateTask ? (
+            <Button variant="ghost" size="sm" onClick={() => onCreateTask(status)} className="h-6 w-6 p-0">
+              <Plus className="h-3 w-3" />
+            </Button>
+          ) : null}
         </div>
       </CardHeader>
 
@@ -67,9 +75,11 @@ export function KanbanColumn({
                 <Plus className="h-6 w-6 text-muted-foreground" />
               </div>
               <p className="text-sm text-muted-foreground mb-2">No tasks yet</p>
-              <Button variant="ghost" size="sm" onClick={() => onCreateTask(status)} className="text-xs">
-                Add a task
-              </Button>
+              {canCreateTask ? (
+                <Button variant="ghost" size="sm" onClick={() => onCreateTask(status)} className="text-xs">
+                  Add a task
+                </Button>
+              ) : null}
             </div>
           ) : (
             tasks.map((task) => (
@@ -79,6 +89,8 @@ export function KanbanColumn({
                 onEdit={onTaskEdit}
                 onDelete={onTaskDelete}
                 onStatusChange={onTaskStatusChange}
+                canManage={canManageTask(task)}
+                canDelete={canDeleteTask(task)}
               />
             ))
           )}

@@ -3,6 +3,8 @@ import prisma from '../config/prisma';
 import { AuthRequest } from '../utils/types';
 import logger from '../utils/logger';
 
+const UPDATABLE_ROLES = ['MANAGER', 'MEMBER'] as const;
+
 export const createProject = async (req: AuthRequest, res: Response) => {
     const { name, description } = req.body;
     const userId = (req.user as { sub: string }).sub;
@@ -188,6 +190,62 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
         res.status(204).send();
     } catch (error) {
         logger.error('Error deleting project:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const updateProjectMemberRole = async (req: AuthRequest, res: Response) => {
+    const { projectId, userId: targetUserId } = req.params;
+    const { role } = req.body as { role: 'MANAGER' | 'MEMBER' };
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        const ownerRecord = await prisma.userProject.findFirst({
+            where: { userId, projectId, role: 'OWNER' },
+        });
+
+        if (!ownerRecord) {
+            return res.status(403).json({ message: 'Forbidden: Only the project owner can change roles.' });
+        }
+
+        if (userId === targetUserId) {
+            return res.status(400).json({ message: 'You cannot change your own role.' });
+        }
+
+        const targetMembership = await prisma.userProject.findUnique({
+            where: { userId_projectId: { userId: targetUserId, projectId } },
+        });
+
+        if (!targetMembership) {
+            return res.status(404).json({ message: 'User is not a member of this project.' });
+        }
+
+        if (targetMembership.role === 'OWNER') {
+            return res.status(400).json({ message: 'You cannot change the owner role.' });
+        }
+
+        if (!UPDATABLE_ROLES.includes(role)) {
+            return res.status(400).json({ message: 'Invalid role.' });
+        }
+
+        const updated = await prisma.userProject.update({
+            where: { userId_projectId: { userId: targetUserId, projectId } },
+            data: { role },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        name: true,
+                        avatarUrl: true,
+                    },
+                },
+            },
+        });
+
+        res.json(updated);
+    } catch (error) {
+        logger.error('Error updating project member role:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };

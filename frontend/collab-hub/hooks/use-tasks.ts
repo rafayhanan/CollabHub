@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createTask, deleteTask, getProjectTasks, getUserTasks, updateTask } from "@/lib/api/services/tasks"
+import { assignTask, createTask, deleteTask, getProjectTasks, getUserTasks, unassignTask, updateTask } from "@/lib/api/services/tasks"
 import type { Task } from "@/lib/api/types"
 
 export const taskKeys = {
@@ -43,12 +43,14 @@ export const useCreateTask = () => {
       title,
       description,
       dueDate,
+      assignments,
     }: {
       projectId: string
       title: string
       description: string
       dueDate?: string
-    }) => createTask(projectId, title, description, dueDate),
+      assignments?: Array<{ userId: string; note?: string }>
+    }) => createTask(projectId, title, description, dueDate, assignments),
     onSuccess: (newTask) => {
       queryClient.setQueryData<Task[]>(taskKeys.project(newTask.projectId), (old) =>
         old ? [newTask, ...old] : [newTask],
@@ -95,6 +97,29 @@ export const useDeleteTask = () => {
         (old) => (old ? old.filter((t) => t.id !== task.id) : old),
       )
       queryClient.setQueryData<Task[]>(taskKeys.user, (old) => (old ? old.filter((t) => t.id !== task.id) : old))
+    },
+  })
+}
+
+export const useAssignTask = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, assignments }: { taskId: string; assignments: Array<{ userId: string; note?: string }> }) =>
+      assignTask(taskId, assignments),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] })
+    },
+  })
+}
+
+export const useUnassignTask = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, userId }: { taskId: string; userId: string }) => unassignTask(taskId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] })
     },
   })
 }

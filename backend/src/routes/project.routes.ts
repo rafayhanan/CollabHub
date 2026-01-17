@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { createProject, getProjectById, getProjects, updateProject, deleteProject } from '../controllers/project.controller';
+import { createProject, getProjectById, getProjects, updateProject, deleteProject, updateProjectMemberRole } from '../controllers/project.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
-import { createProjectSchema, updateProjectSchema } from '../validators/project.validator';
+import { createProjectSchema, updateProjectSchema, updateProjectMemberRoleSchema } from '../validators/project.validator';
 
 const router = Router();
 
@@ -129,6 +129,48 @@ router.put('/:id', authenticateToken, validate(updateProjectSchema), updateProje
  *         description: Project not found
  */
 router.delete('/:id', authenticateToken, deleteProject);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/members/{userId}/role:
+ *   put:
+ *     summary: Update a project member role (owner only)
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [role]
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [MANAGER, MEMBER]
+ *     responses:
+ *       '200':
+ *         description: Role updated successfully
+ *       '400':
+ *         description: Invalid input
+ *       '403':
+ *         description: Forbidden
+ *       '404':
+ *         description: Member not found
+ */
+router.put('/:projectId/members/:userId/role', authenticateToken, validate(updateProjectMemberRoleSchema), updateProjectMemberRole);
 
 
 

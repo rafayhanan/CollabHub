@@ -15,9 +15,19 @@ interface TaskCardProps {
   onDelete: (task: Task) => void
   onStatusChange: (task: Task, newStatus: Task["status"]) => void
   isDragging?: boolean
+  canManage?: boolean
+  canDelete?: boolean
 }
 
-export function TaskCard({ task, onEdit, onDelete, onStatusChange, isDragging }: TaskCardProps) {
+export function TaskCard({
+  task,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  isDragging,
+  canManage = true,
+  canDelete = true,
+}: TaskCardProps) {
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "DONE"
 
   const getStatusColor = (status: Task["status"]) => {
@@ -57,24 +67,32 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange, isDragging }:
               <p className="text-xs text-muted-foreground text-pretty line-clamp-2">{task.description}</p>
             )}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(task)}>Edit Task</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStatusChange(task, "TODO")}>Move to Todo</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStatusChange(task, "IN_PROGRESS")}>
-                Move to In Progress
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStatusChange(task, "DONE")}>Move to Done</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDelete(task)} className="text-destructive">
-                Delete Task
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canManage || canDelete ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onEdit(task)} disabled={!canManage}>
+                  Edit Task
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onStatusChange(task, "TODO")} disabled={!canManage}>
+                  Move to Todo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onStatusChange(task, "IN_PROGRESS")} disabled={!canManage}>
+                  Move to In Progress
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onStatusChange(task, "DONE")} disabled={!canManage}>
+                  Move to Done
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDelete(task)} className="text-destructive" disabled={!canDelete}>
+                  Delete Task
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </CardHeader>
 
