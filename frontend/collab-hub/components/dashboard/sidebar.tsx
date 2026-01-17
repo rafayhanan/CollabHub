@@ -56,7 +56,12 @@ export function Sidebar({ projects, onCreateProject, onNavigate, className }: Si
   ]
 
   return (
-    <div className={cn("flex h-full min-h-0 w-64 flex-col bg-sidebar border-r border-sidebar-border", className)}>
+    <div
+      className={cn(
+        "flex h-full min-h-0 w-64 flex-col overflow-hidden bg-sidebar border-r border-sidebar-border",
+        className,
+      )}
+    >
       {/* Header */}
       <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
         <div className="flex items-center space-x-2">
@@ -68,7 +73,7 @@ export function Sidebar({ projects, onCreateProject, onNavigate, className }: Si
       </div>
 
       <ScrollArea
-        className="flex-1 px-3 py-4"
+        className="flex-1 min-h-0 px-3 py-4"
         scrollbarClassName="bg-emerald-500/10"
         thumbClassName="bg-emerald-500/70 hover:bg-emerald-500"
       >

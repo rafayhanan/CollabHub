@@ -293,7 +293,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex min-h-screen md:h-screen bg-background">
+    <div className="flex h-full min-h-0 bg-background">
       <Sidebar
         projects={projects}
         onCreateProject={() => setIsCreateProjectDialogOpen(true)}
