@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +23,27 @@ export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false)
   const { login: setUser } = useAuth()
   const router = useRouter()
+
+  const passwordChecks = useMemo(() => {
+    return [
+      { label: "At least 8 characters", valid: password.length >= 8 },
+      { label: "Uppercase letter", valid: /[A-Z]/.test(password) },
+      { label: "Lowercase letter", valid: /[a-z]/.test(password) },
+      { label: "Number", valid: /\d/.test(password) },
+      { label: "Special character", valid: /[^A-Za-z0-9]/.test(password) },
+    ]
+  }, [password])
+  const passedChecks = passwordChecks.filter((check) => check.valid).length
+  const strengthLabel =
+    passedChecks >= 5 ? "Strong" : passedChecks >= 3 ? "Medium" : password.length ? "Weak" : "Use a strong password"
+  const strengthColor =
+    passedChecks >= 5
+      ? "bg-emerald-500"
+      : passedChecks >= 3
+        ? "bg-amber-500"
+        : password.length
+          ? "bg-rose-500"
+          : "bg-muted"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,6 +111,28 @@ export function RegisterForm() {
               required
               disabled={isLoading}
             />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Password strength</span>
+                <span>{strengthLabel}</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted">
+                <div
+                  className={`h-2 rounded-full transition-all ${strengthColor}`}
+                  style={{ width: `${(passedChecks / passwordChecks.length) * 100}%` }}
+                />
+              </div>
+              <div className="grid gap-1 text-xs text-muted-foreground">
+                {passwordChecks.map((check) => (
+                  <div key={check.label} className="flex items-center gap-2">
+                    <span className={check.valid ? "text-emerald-600" : "text-muted-foreground"}>
+                      {check.valid ? "●" : "○"}
+                    </span>
+                    <span className={check.valid ? "text-foreground" : "text-muted-foreground"}>{check.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

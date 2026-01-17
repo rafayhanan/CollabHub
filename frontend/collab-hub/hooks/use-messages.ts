@@ -21,7 +21,7 @@ export const useSendMessage = () => {
     mutationFn: ({ channelId, content }: { channelId: string; content: string }) => sendMessage(channelId, content),
     onSuccess: (newMessage) => {
       queryClient.setQueryData<Message[]>(messageKeys.channel(newMessage.channelId), (old) =>
-        old ? [...old, newMessage] : [newMessage],
+        old?.some((msg) => msg.id === newMessage.id) ? old : old ? [...old, newMessage] : [newMessage],
       )
     },
   })

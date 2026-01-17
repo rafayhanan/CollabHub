@@ -142,13 +142,13 @@ export function Sidebar({ projects, onCreateProject, onNavigate, className }: Si
                           variant={isActive ? "secondary" : "ghost"}
                           size="sm"
                           className={cn(
-                            "w-full justify-start text-xs text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                            "w-full justify-start text-xs text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-auto py-2",
                             isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
                           )}
                           onClick={() => onNavigate?.()}
                         >
                           <FolderOpen className="mr-2 h-3 w-3" />
-                          <span className="truncate">{project.name}</span>
+                          <span className="whitespace-normal break-words text-left">{project.name}</span>
                         </Button>
                       </Link>
                       {isActive && (
@@ -158,14 +158,14 @@ export function Sidebar({ projects, onCreateProject, onNavigate, className }: Si
                               variant={pathname === `/dashboard/projects/${project.id}/members` ? "secondary" : "ghost"}
                               size="sm"
                               className={cn(
-                                "w-full justify-start text-xs text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                "w-full justify-start text-xs text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-auto py-2",
                                 pathname === `/dashboard/projects/${project.id}/members` &&
                                   "bg-sidebar-accent text-sidebar-accent-foreground",
                               )}
                               onClick={() => onNavigate?.()}
                             >
                               <Users className="mr-2 h-3 w-3" />
-                              <span className="truncate">Members</span>
+                              <span className="whitespace-normal break-words text-left">Members</span>
                             </Button>
                           </Link>
                         </div>
@@ -188,7 +188,7 @@ export function Sidebar({ projects, onCreateProject, onNavigate, className }: Si
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-sidebar-foreground truncate">{user?.email}</p>
+            <p className="text-xs font-medium text-sidebar-foreground break-words">{user?.email}</p>
           </div>
         </div>
         <div className="flex space-x-1">

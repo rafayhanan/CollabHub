@@ -88,6 +88,8 @@ export default function DashboardPage() {
   }
 
   const handleDeleteProject = async (project: Project) => {
+    const role = roleByProjectId.get(project.id)
+    if (role !== "OWNER") return
     if (confirm(`Are you sure you want to delete "${project.name}"?`)) {
       await deleteProjectMutation(project.id)
     }
@@ -268,6 +270,7 @@ export default function DashboardPage() {
                       }}
                       onEdit={handleEditProject}
                       onDelete={handleDeleteProject}
+                      canDelete={roleByProjectId.get(project.id) === "OWNER"}
                     />
                   ))}
                 </div>

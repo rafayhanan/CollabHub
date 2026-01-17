@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar"
@@ -27,8 +27,9 @@ import { getApiErrorMessage } from "@/lib/api/error"
 import { useToast } from "@/hooks/use-toast"
 
 export default function MessagesPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects()
@@ -62,11 +63,34 @@ export default function MessagesPage() {
     }
   }, [isAuthenticated, authLoading, router])
 
+  const projectNameById = useMemo(
+    () => new Map(projects.map((project) => [project.id, project.name])),
+    [projects],
+  )
+  const requestedProjectId = searchParams.get("projectId")
   useEffect(() => {
-    if (channels.length > 0 && !activeChannel) {
-      setActiveChannel(channels[0])
+    if (channels.length === 0) return
+
+    const preferredChannel = requestedProjectId
+      ? channels.find(
+        (channel) => channel.projectId === requestedProjectId && channel.type === "ANNOUNCEMENTS",
+      ) ||
+      channels.find(
+        (channel) => channel.projectId === requestedProjectId && channel.type === "PROJECT_GENERAL",
+      ) ||
+      channels.find((channel) => channel.projectId === requestedProjectId) ||
+      null
+      : null
+
+    if (!activeChannel && (preferredChannel || channels[0])) {
+      setActiveChannel(preferredChannel || channels[0])
+      return
     }
-  }, [channels, activeChannel])
+
+    if (requestedProjectId && activeChannel?.projectId !== requestedProjectId) {
+      setActiveChannel(preferredChannel || channels[0])
+    }
+  }, [channels, activeChannel, requestedProjectId])
 
   useEffect(() => {
     if (projectsError || tasksError || channelsError) {
@@ -136,11 +160,29 @@ export default function MessagesPage() {
     await createProjectMutation({ name, description })
   }
 
+  const roleByProjectId = useMemo(
+    () =>
+      new Map(
+        projects.map((project) => [
+          project.id,
+          project.members?.find((member) => member.userId === user?.id)?.role || "MEMBER",
+        ]),
+      ),
+    [projects, user?.id],
+  )
+  const canSendInChannel = useMemo(() => {
+    if (!activeChannel) return false
+    if (activeChannel.type !== "ANNOUNCEMENTS") return true
+    const role = activeChannel.projectId ? roleByProjectId.get(activeChannel.projectId) : "MEMBER"
+    return role === "OWNER" || role === "MANAGER"
+  }, [activeChannel, roleByProjectId])
+
   useChannelEvents(activeChannel?.id || null, {
     onMessageCreated: (message) => {
-      queryClient.setQueryData<Message[]>(messageKeys.channel(message.channelId), (old) =>
-        old ? [...old, message] : [message],
-      )
+      queryClient.setQueryData<Message[]>(messageKeys.channel(message.channelId), (old) => {
+        if (old?.some((msg) => msg.id === message.id)) return old
+        return old ? [...old, message] : [message]
+      })
     },
     onMessageUpdated: (updatedMessage) => {
       queryClient.setQueryData<Message[]>(messageKeys.channel(updatedMessage.channelId), (old) =>
@@ -203,6 +245,7 @@ export default function MessagesPage() {
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           <ChannelList
             channels={channels}
+            projects={projects}
             activeChannelId={activeChannel?.id}
             onChannelSelect={handleChannelSelect}
             onCreateChannel={() => setIsCreateChannelDialogOpen(true)}
@@ -225,7 +268,14 @@ export default function MessagesPage() {
                         <MessageSquare className="h-5 w-5 text-muted-foreground" />
                       )}
                       {activeChannel.type === "ANNOUNCEMENTS" && <Megaphone className="h-5 w-5 text-muted-foreground" />}
-                      <h1 className="text-lg font-semibold">{activeChannel.name}</h1>
+                      <div>
+                        <h1 className="text-lg font-semibold break-words">{activeChannel.name}</h1>
+                        {activeChannel.projectId && (
+                          <p className="text-xs text-muted-foreground">
+                            {projectNameById.get(activeChannel.projectId)}
+                          </p>
+                        )}
+                      </div>
                       <Badge variant="secondary" className="text-xs">
                         {activeChannel.members.length} member{activeChannel.members.length !== 1 ? "s" : ""}
                       </Badge>
@@ -251,7 +301,13 @@ export default function MessagesPage() {
                   onSendMessage={handleSendMessage}
                   placeholder={`Message #${activeChannel.name}`}
                   channelId={activeChannel.id} // Pass channelId for typing indicators
+                  disabled={!canSendInChannel}
                 />
+                {!canSendInChannel && (
+                  <div className="px-4 pb-4 text-xs text-muted-foreground">
+                    Only owners and managers can send messages in announcements.
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center">

@@ -5,11 +5,12 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Hash, Megaphone, MessageSquare, MoreHorizontal, Plus, Users } from "lucide-react"
-import type { Channel } from "@/lib/api/types"
+import type { Channel, Project } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 interface ChannelListProps {
   channels: Channel[]
+  projects: Project[]
   activeChannelId?: string
   onChannelSelect: (channel: Channel) => void
   onCreateChannel: () => void
@@ -19,6 +20,7 @@ interface ChannelListProps {
 
 export function ChannelList({
   channels,
+  projects,
   activeChannelId,
   onChannelSelect,
   onCreateChannel,
@@ -38,17 +40,17 @@ export function ChannelList({
     }
   }
 
-  const groupedChannels = channels.reduce(
-    (acc, channel) => {
-      acc[channel.type].push(channel)
-      return acc
-    },
-    {
-      PROJECT_GENERAL: [] as Channel[],
-      ANNOUNCEMENTS: [] as Channel[],
-      TASK_SPECIFIC: [] as Channel[],
-    },
-  )
+  const projectNameById = new Map(projects.map((project) => [project.id, project.name]))
+  const channelsByProject = channels.reduce<Record<string, Channel[]>>((acc, channel) => {
+    const key = channel.projectId || "unassigned"
+    if (!acc[key]) acc[key] = []
+    acc[key].push(channel)
+    return acc
+  }, {})
+  const orderedProjectIds = [
+    ...projects.map((project) => project.id),
+    ...Object.keys(channelsByProject).filter((projectId) => !projectNameById.has(projectId)),
+  ].filter((projectId, index, self) => self.indexOf(projectId) === index)
 
   const renderChannelGroup = (title: string, channels: Channel[]) => {
     if (channels.length === 0) return null
@@ -72,12 +74,12 @@ export function ChannelList({
                 size="sm"
                 onClick={() => onChannelSelect(channel)}
                 className={cn(
-                  "flex-1 justify-start text-left h-8 px-2",
+                  "flex-1 justify-start text-left h-auto px-2 py-2",
                   isActive && "bg-accent text-accent-foreground",
                 )}
               >
                 <Icon className="mr-2 h-3 w-3 flex-shrink-0" />
-                <span className="truncate text-sm">{channel.name}</span>
+                <span className="text-sm whitespace-normal break-words">{channel.name}</span>
                 <div className="flex items-center space-x-1 ml-auto">
                   <Users className="h-3 w-3 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">{channel.members.length}</span>
@@ -127,9 +129,32 @@ export function ChannelList({
 
       <ScrollArea className="flex-1 p-2">
         <div className="space-y-4">
-          {renderChannelGroup("Announcements", groupedChannels.ANNOUNCEMENTS)}
-          {renderChannelGroup("General", groupedChannels.PROJECT_GENERAL)}
-          {renderChannelGroup("Tasks", groupedChannels.TASK_SPECIFIC)}
+          {orderedProjectIds.map((projectId) => {
+            const projectChannels = channelsByProject[projectId]
+            if (!projectChannels?.length) return null
+            const grouped = projectChannels.reduce(
+              (acc, channel) => {
+                acc[channel.type].push(channel)
+                return acc
+              },
+              {
+                PROJECT_GENERAL: [] as Channel[],
+                ANNOUNCEMENTS: [] as Channel[],
+                TASK_SPECIFIC: [] as Channel[],
+              },
+            )
+
+            return (
+                <div key={projectId} className="space-y-2">
+                  <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider break-words">
+                    {projectNameById.get(projectId) || "Other"}
+                </div>
+                {renderChannelGroup("Announcements", grouped.ANNOUNCEMENTS)}
+                {renderChannelGroup("General", grouped.PROJECT_GENERAL)}
+                {renderChannelGroup("Tasks", grouped.TASK_SPECIFIC)}
+              </div>
+            )
+          })}
         </div>
 
         {channels.length === 0 && (
