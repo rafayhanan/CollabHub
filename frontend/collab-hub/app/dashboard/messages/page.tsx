@@ -233,7 +233,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex min-h-screen md:h-screen bg-background">
+    <div className="flex h-full min-h-0 bg-background">
       <Sidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} className="hidden md:flex" />
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -251,7 +251,7 @@ export default function MessagesPage() {
             onCreateChannel={() => setIsCreateChannelDialogOpen(true)}
           />
 
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {error && (
               <div className="border-b border-border bg-destructive/10 text-destructive text-sm px-4 py-2">
                 {error}

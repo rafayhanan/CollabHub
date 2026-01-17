@@ -75,7 +75,7 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="flex min-h-screen md:h-screen bg-background">
+    <div className="flex h-full min-h-0 bg-background">
       <Sidebar projects={projects} onCreateProject={() => setIsCreateProjectDialogOpen(true)} className="hidden md:flex" />
 
       <div className="flex-1 flex flex-col overflow-hidden">
