@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../utils/types';
 import logger from '../utils/logger';
+import { createDefaultChannels } from '../services/channel.service';
 
 const UPDATABLE_ROLES = ['MANAGER', 'MEMBER'] as const;
 
@@ -32,6 +33,8 @@ export const createProject = async (req: AuthRequest, res: Response) => {
 
             return project;
         });
+
+        await createDefaultChannels({ projectId: newProject.id, ownerId: userId });
 
         res.status(201).json(newProject);
     } catch (error) {

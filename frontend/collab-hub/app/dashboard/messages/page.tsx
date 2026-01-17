@@ -15,13 +15,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TypingIndicator } from "@/components/chat/typing-indicator"
-import type { Channel, Message } from "@/lib/api/types"
+import type { Channel, Message, ProjectMember } from "@/lib/api/types"
 import { useProjects, useCreateProject } from "@/hooks/use-projects"
 import { useUserTasks } from "@/hooks/use-tasks"
 import { useAllProjectChannels, useCreateChannel } from "@/hooks/use-channels"
 import { useChannelMessages, useDeleteMessage, useEditMessage, useSendMessage, messageKeys } from "@/hooks/use-messages"
 import { useQueryClient } from "@tanstack/react-query"
-import { Hash, MessageSquare, Users } from "lucide-react"
+import { Hash, MessageSquare, Megaphone } from "lucide-react"
 import { useChannelEvents } from "@/hooks/use-websocket"
 import { getApiErrorMessage } from "@/lib/api/error"
 import { useToast } from "@/hooks/use-toast"
@@ -126,8 +126,9 @@ export default function MessagesPage() {
     description?: string,
     projectId?: string,
     taskId?: string,
+    memberIds?: string[],
   ) => {
-    const newChannel = await createChannelMutation({ name, type, description, projectId, taskId })
+    const newChannel = await createChannelMutation({ name, type, description, projectId, taskId, memberIds })
     setActiveChannel(newChannel)
   }
 
@@ -223,7 +224,7 @@ export default function MessagesPage() {
                       {activeChannel.type === "TASK_SPECIFIC" && (
                         <MessageSquare className="h-5 w-5 text-muted-foreground" />
                       )}
-                      {activeChannel.type === "PRIVATE_DM" && <Users className="h-5 w-5 text-muted-foreground" />}
+                      {activeChannel.type === "ANNOUNCEMENTS" && <Megaphone className="h-5 w-5 text-muted-foreground" />}
                       <h1 className="text-lg font-semibold">{activeChannel.name}</h1>
                       <Badge variant="secondary" className="text-xs">
                         {activeChannel.members.length} member{activeChannel.members.length !== 1 ? "s" : ""}
@@ -287,6 +288,10 @@ export default function MessagesPage() {
         onCreateChannel={handleCreateChannel}
         projects={projects}
         tasks={tasks}
+        projectMembers={projects.reduce<Record<string, ProjectMember[]>>((acc, project) => {
+          acc[project.id] = project.members || []
+          return acc
+        }, {})}
       />
 
       <CreateProjectDialog

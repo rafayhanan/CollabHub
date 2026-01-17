@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
-import type { Channel, Project, Task } from "@/lib/api/types"
+import type { Channel, Project, ProjectMember, Task } from "@/lib/api/types"
 
 interface CreateChannelDialogProps {
   open: boolean
@@ -29,10 +29,12 @@ interface CreateChannelDialogProps {
     description?: string,
     projectId?: string,
     taskId?: string,
+    memberIds?: string[],
   ) => Promise<void>
   projects: Project[]
   tasks?: Task[]
   initialProjectId?: string
+  projectMembers?: Record<string, ProjectMember[]>
 }
 
 export function CreateChannelDialog({
@@ -42,14 +44,20 @@ export function CreateChannelDialog({
   projects,
   tasks = [],
   initialProjectId,
+  projectMembers = {},
 }: CreateChannelDialogProps) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [type, setType] = useState<Channel["type"]>("PROJECT_GENERAL")
   const [projectId, setProjectId] = useState(initialProjectId || "")
   const [taskId, setTaskId] = useState("")
+  const [memberIds, setMemberIds] = useState<string[]>([])
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    setMemberIds([])
+  }, [projectId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,6 +86,7 @@ export function CreateChannelDialog({
         description.trim() || undefined,
         projectId || undefined,
         taskId || undefined,
+        memberIds,
       )
       // Reset form
       setName("")
@@ -85,6 +94,7 @@ export function CreateChannelDialog({
       setType("PROJECT_GENERAL")
       setProjectId(initialProjectId || "")
       setTaskId("")
+      setMemberIds([])
       onOpenChange(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create channel")
@@ -94,6 +104,7 @@ export function CreateChannelDialog({
   }
 
   const filteredTasks = tasks.filter((task) => !projectId || task.projectId === projectId)
+  const availableMembers = projectId ? projectMembers[projectId] || [] : []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,7 +143,6 @@ export function CreateChannelDialog({
                 <SelectItem value="PROJECT_GENERAL">Project General</SelectItem>
                 <SelectItem value="TASK_SPECIFIC">Task Specific</SelectItem>
                 <SelectItem value="ANNOUNCEMENTS">Announcements</SelectItem>
-                <SelectItem value="PRIVATE_DM">Private Message</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -192,6 +202,35 @@ export function CreateChannelDialog({
               )}
             </>
           )}
+
+          {projectId && availableMembers.length > 0 ? (
+            <div className="space-y-2">
+              <Label>Channel Members</Label>
+              <div className="space-y-2 rounded-md border p-3">
+                {availableMembers.map((member) => (
+                  <label key={member.userId} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={memberIds.includes(member.userId)}
+                      onChange={(event) => {
+                        if (event.target.checked) {
+                          setMemberIds((prev) => [...prev, member.userId])
+                        } else {
+                          setMemberIds((prev) => prev.filter((id) => id !== member.userId))
+                        }
+                      }}
+                      disabled={isLoading}
+                    />
+                    <span>{member.user.name || member.user.email}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Owners and managers are added automatically.
+              </p>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="description">Description (Optional)</Label>

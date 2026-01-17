@@ -36,13 +36,15 @@ export const useCreateChannel = () => {
       description,
       projectId,
       taskId,
+      memberIds,
     }: {
       name: string
       type: Channel["type"]
       description?: string
       projectId?: string
       taskId?: string
-    }) => createChannel(name, type, description, projectId, taskId),
+      memberIds?: string[]
+    }) => createChannel(name, type, description, projectId, taskId, memberIds),
     onSuccess: (newChannel) => {
       if (newChannel.projectId) {
         queryClient.setQueryData<Channel[]>(channelKeys.project(newChannel.projectId), (old) =>

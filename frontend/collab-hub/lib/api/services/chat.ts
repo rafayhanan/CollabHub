@@ -12,6 +12,7 @@ export const createChannel = async (
   description?: string,
   projectId?: string,
   taskId?: string,
+  memberIds?: string[],
 ): Promise<Channel> => {
   const response = await apiClient.post<Channel>("/channels", {
     name,
@@ -19,6 +20,7 @@ export const createChannel = async (
     description,
     projectId,
     taskId,
+    memberIds,
   })
   return response.data
 }

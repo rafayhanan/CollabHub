@@ -1,16 +1,21 @@
 import dotenv from 'dotenv';
+import http from 'http';
 import app from './app';
 import logger from './utils/logger';
 import { startInvitationWorker } from './jobs/invitation.worker';
 import { startNotificationWorker } from './jobs/notification.worker';
 import { logRedisStatus } from './config/redis';
 import { logMailerStatus } from './utils/mailer';
+import { initSocket } from './realtime/socket';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
   logger.info(`Swagger docs available at http://localhost:${PORT}/api-docs`);
 });

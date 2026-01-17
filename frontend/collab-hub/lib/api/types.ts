@@ -58,7 +58,7 @@ export interface TaskAssignment {
 export interface Channel {
     id: string
     name: string
-    type: "PROJECT_GENERAL" | "TASK_SPECIFIC" | "PRIVATE_DM" | "ANNOUNCEMENTS"
+    type: "PROJECT_GENERAL" | "TASK_SPECIFIC" | "ANNOUNCEMENTS"
     description?: string
     projectId?: string
     taskId?: string

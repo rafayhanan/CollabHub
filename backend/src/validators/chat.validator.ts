@@ -4,7 +4,6 @@ import { z } from 'zod';
 export const ChannelTypeSchema = z.enum([
   'PROJECT_GENERAL',
   'TASK_SPECIFIC', 
-  'PRIVATE_DM',
   'ANNOUNCEMENTS'
 ]);
 
@@ -33,6 +32,10 @@ export const createChannelValidator = z.object({
   taskId: z.string()
     .uuid('Invalid task ID format')
     .optional(),
+
+  memberIds: z.array(
+    z.string().uuid('Invalid user ID format'),
+  ).optional(),
 }).refine((data) => {
   // Project channels must have a projectId
   if (data.type === 'PROJECT_GENERAL' || data.type === 'ANNOUNCEMENTS') {
