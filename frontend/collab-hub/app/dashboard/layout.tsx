@@ -32,5 +32,5 @@ export default function DashboardLayout({
     return null
   }
 
-  return <>{children}</>
+  return <div className="h-screen overflow-hidden">{children}</div>
 }

@@ -67,7 +67,11 @@ export function Sidebar({ projects, onCreateProject, onNavigate, className }: Si
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-3 py-4">
+      <ScrollArea
+        className="flex-1 px-3 py-4"
+        scrollbarClassName="bg-emerald-500/10"
+        thumbClassName="bg-emerald-500/70 hover:bg-emerald-500"
+      >
         {/* Main Navigation */}
         <div className="space-y-1">
           {navigation.map((item) => {
