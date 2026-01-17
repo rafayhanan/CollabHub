@@ -23,14 +23,14 @@ export const useProjectTasks = (projectId: string | null) => {
   })
 }
 
-export const useAllProjectTasks = (projectIds: string[]) => {
+export const useAllProjectTasks = (projectIds: string[], enabled = true) => {
   return useQuery({
     queryKey: taskKeys.allProjects(projectIds),
     queryFn: async () => {
       const taskLists = await Promise.all(projectIds.map((projectId) => getProjectTasks(projectId)))
       return taskLists.flat()
     },
-    enabled: projectIds.length > 0,
+    enabled: enabled && projectIds.length > 0,
   })
 }
 

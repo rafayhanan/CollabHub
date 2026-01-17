@@ -3,6 +3,7 @@ import logger from './logger';
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const from = process.env.RESEND_FROM;
+const brandName = 'CollabHub';
 
 export const isMailerConfigured = Boolean(resendApiKey && from);
 
@@ -21,8 +22,9 @@ export const sendEmail = async (options: { to: string; subject: string; html: st
 
     const resend = getResendClient();
 
+    const formattedFrom = from.includes('<') ? from : `${brandName} <${from}>`;
     await resend.emails.send({
-        from,
+        from: formattedFrom,
         to: options.to,
         subject: options.subject,
         html: options.html,

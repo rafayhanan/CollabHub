@@ -13,6 +13,20 @@ export const createNotification = async (params: {
   sendEmail?: boolean;
   userEmail?: string | null;
 }) => {
+  const resolveLink = (link?: string) => {
+    if (!link) return undefined;
+    if (link.startsWith('http://') || link.startsWith('https://')) return link;
+
+    const frontendUrl = (process.env.FRONTEND_URL || '')
+      .split(',')
+      .map((origin) => origin.trim().replace(/\/$/, ''))
+      .find(Boolean);
+    if (!frontendUrl) return link;
+
+    const normalizedPath = link.startsWith('/') ? link : `/${link}`;
+    return `${frontendUrl}${normalizedPath}`;
+  };
+
   const notification = await prisma.notification.create({
     data: {
       userId: params.userId,
@@ -24,6 +38,7 @@ export const createNotification = async (params: {
   });
 
   if (params.sendEmail && notificationQueue) {
+    const emailLink = resolveLink(params.link);
     const email = params.userEmail
       ? params.userEmail
       : (
@@ -39,7 +54,7 @@ export const createNotification = async (params: {
           to: email,
           title: params.title,
           body: params.body,
-          link: params.link,
+          link: emailLink,
         })
         .catch((error) => logger.error('Failed to enqueue notification email:', error));
     }
