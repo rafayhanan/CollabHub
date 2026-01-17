@@ -60,7 +60,7 @@ export function MessageList({ messages, onEditMessage, onDeleteMessage, isLoadin
   }
 
   return (
-    <ScrollArea className="flex-1" ref={scrollAreaRef}>
+    <ScrollArea className="flex-1 min-h-0" ref={scrollAreaRef}>
       <div className="p-4 space-y-1">
         {messages.map((message, index) => {
           const previousMessage = index > 0 ? messages[index - 1] : undefined

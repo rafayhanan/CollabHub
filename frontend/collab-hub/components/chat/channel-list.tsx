@@ -127,7 +127,11 @@ export function ChannelList({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-2">
+      <ScrollArea
+        className="flex-1 p-2"
+        scrollbarClassName="bg-emerald-500/10"
+        thumbClassName="bg-emerald-500/70 hover:bg-emerald-500"
+      >
         <div className="space-y-4">
           {orderedProjectIds.map((projectId) => {
             const projectChannels = channelsByProject[projectId]
