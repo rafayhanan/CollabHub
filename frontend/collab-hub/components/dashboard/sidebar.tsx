@@ -56,7 +56,7 @@ export function Sidebar({ projects, onCreateProject, onNavigate, className }: Si
   ]
 
   return (
-    <div className={cn("flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border", className)}>
+    <div className={cn("flex h-full min-h-0 w-64 flex-col bg-sidebar border-r border-sidebar-border", className)}>
       {/* Header */}
       <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
         <div className="flex items-center space-x-2">

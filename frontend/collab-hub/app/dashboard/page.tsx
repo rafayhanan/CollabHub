@@ -17,6 +17,8 @@ import { useCreateProject, useDeleteProject, useProjects } from "@/hooks/use-pro
 import { useAllProjectTasks, useUserTasks } from "@/hooks/use-tasks"
 import { Plus, CheckSquare, Clock, AlertCircle, TrendingUp } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/api/error"
+import { useToast } from "@/hooks/use-toast"
+import { ToastAction } from "@/components/ui/toast"
 
 export default function DashboardPage() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth()
@@ -63,6 +65,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [error, setError] = useState("")
+  const { toast } = useToast()
   const { mutateAsync: createProjectMutation } = useCreateProject()
   const { mutateAsync: deleteProjectMutation } = useDeleteProject()
 
@@ -90,9 +93,19 @@ export default function DashboardPage() {
   const handleDeleteProject = async (project: Project) => {
     const role = roleByProjectId.get(project.id)
     if (role !== "OWNER") return
-    if (confirm(`Are you sure you want to delete "${project.name}"?`)) {
-      await deleteProjectMutation(project.id)
-    }
+    toast({
+      title: "Delete project?",
+      description: `This will permanently delete "${project.name}" and its data.`,
+      variant: "destructive",
+      action: (
+        <ToastAction
+          altText="Confirm delete"
+          onClick={() => deleteProjectMutation(project.id)}
+        >
+          Delete
+        </ToastAction>
+      ),
+    })
   }
 
   const handleEditProject = (project: Project) => {
@@ -146,7 +159,7 @@ export default function DashboardPage() {
     <div className="flex min-h-screen md:h-screen bg-background">
       <Sidebar projects={projects} onCreateProject={() => setIsCreateDialogOpen(true)} className="hidden md:flex" />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <DashboardHeader
           onCreateProject={() => setIsCreateDialogOpen(true)}
           mobileSidebar={<MobileSidebar projects={projects} onCreateProject={() => setIsCreateDialogOpen(true)} />}

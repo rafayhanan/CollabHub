@@ -38,11 +38,19 @@ export function InviteUserDialog({ projectId, onInviteSent }: InviteUserDialogPr
 
     setIsLoading(true)
     try {
-      await sendInvitation({ projectId, email })
-      toast({
-        title: "Invitation sent",
-        description: `Invitation sent to ${email}`,
-      })
+      const invitation = await sendInvitation({ projectId, email })
+      if (invitation.emailStatus === "FAILED") {
+        toast({
+          title: "Invitation created",
+          description: invitation.emailError || "Email could not be sent. You can resend from the members page.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Invitation sent",
+          description: `Invitation sent to ${email}`,
+        })
+      }
       setEmail("")
       setOpen(false)
       onInviteSent?.()

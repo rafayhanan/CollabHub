@@ -3,12 +3,14 @@
 import { useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Users, Crown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { InviteUserDialog } from "./invite-user-dialog"
 import { useProject, useUpdateMemberRole } from "@/hooks/use-projects"
+import { useProjectInvitations, useResendInvitation } from "@/hooks/use-invitations"
 import type { ProjectMember } from "@/lib/api/types"
 import { getApiErrorMessage } from "@/lib/api/error"
 
@@ -22,6 +24,8 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
   const { toast } = useToast()
   const { data: project, isLoading, error } = useProject(projectId)
   const { mutateAsync: updateMemberRoleMutation } = useUpdateMemberRole()
+  const { data: invitations = [] } = useProjectInvitations(projectId, isOwner)
+  const { mutateAsync: resendInvitationMutation } = useResendInvitation()
   const members = useMemo<ProjectMember[]>(() => project?.members || [], [project])
 
   useEffect(() => {
@@ -56,6 +60,22 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
       toast({
         title: "Error",
         description: getApiErrorMessage(err, "Failed to update member role"),
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleResendInvitation = async (invitationId: string, email: string) => {
+    try {
+      await resendInvitationMutation({ projectId, invitationId })
+      toast({
+        title: "Invitation resent",
+        description: `Invitation resent to ${email}`,
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(err, "Failed to resend invitation"),
         variant: "destructive",
       })
     }
@@ -135,6 +155,36 @@ export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMem
             </div>
           ))}
         </div>
+
+        {isOwner && invitations.length > 0 ? (
+          <div className="mt-6 space-y-3">
+            <div className="text-sm font-medium text-muted-foreground">Pending Invitations</div>
+            <div className="space-y-2">
+              {invitations.map((invitation) => (
+                <div key={invitation.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="text-sm font-medium">{invitation.invitedUserEmail}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {invitation.emailStatus === "FAILED"
+                        ? `Email failed${invitation.emailError ? `: ${invitation.emailError}` : ""}`
+                        : invitation.emailStatus === "SENT"
+                          ? `Email sent${invitation.emailLastSentAt ? ` on ${new Date(invitation.emailLastSentAt).toLocaleDateString()}` : ""}`
+                          : "Email queued"}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleResendInvitation(invitation.id, invitation.invitedUserEmail)}
+                    disabled={invitation.emailStatus === "QUEUED"}
+                  >
+                    {invitation.emailStatus === "QUEUED" ? "Queued" : "Resend"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

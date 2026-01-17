@@ -105,6 +105,9 @@ export interface Invitation {
     invitedById: string
     invitedUserEmail: string
     status: "PENDING" | "ACCEPTED" | "DECLINED"
+    emailStatus?: "QUEUED" | "SENT" | "FAILED"
+    emailLastSentAt?: string | null
+    emailError?: string | null
     createdAt: string
     updatedAt: string
     project: {

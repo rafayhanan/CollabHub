@@ -80,6 +80,12 @@ enum InvitationStatus {
   DECLINED
 }
 
+enum InvitationEmailStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
 model Invitation {
   id               String           @id @default(uuid())
   project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -88,6 +94,9 @@ model Invitation {
   invitedById      String
   invitedUserEmail String
   status           InvitationStatus @default(PENDING)
+  emailStatus      InvitationEmailStatus @default(QUEUED)
+  emailLastSentAt  DateTime?
+  emailError       String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 }

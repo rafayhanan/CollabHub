@@ -5,6 +5,7 @@ import logger from '../utils/logger';
 import { invitationQueue } from '../queues/invitation.queue';
 import { createNotification } from '../utils/notifications';
 import { addUserToDefaultChannels } from '../services/channel.service';
+import { isMailerConfigured } from '../utils/mailer';
 
 export const getInvitations = async (req: AuthRequest, res: Response) => {
     const userId = (req.user as { sub: string }).sub;
@@ -125,7 +126,11 @@ export const sendInvitation = async (req: AuthRequest, res: Response) => {
             });
         }
 
-        if (invitationQueue) {
+        if (invitationQueue && isMailerConfigured) {
+            await prisma.invitation.update({
+                where: { id: invitation.id },
+                data: ({ emailStatus: 'QUEUED', emailError: null } as any),
+            });
             invitationQueue
                 .add('send-invite-email', {
                     invitationId: invitation.id,
@@ -134,14 +139,126 @@ export const sendInvitation = async (req: AuthRequest, res: Response) => {
                     inviterName: inviter?.name || inviter?.email || 'A teammate',
                     inviterEmail: inviter?.email,
                 })
-                .catch((queueError) => {
+                .catch(async (queueError) => {
                     logger.error('Failed to enqueue invitation email:', queueError);
+                    await prisma.invitation.update({
+                        where: { id: invitation.id },
+                        data: ({ emailStatus: 'FAILED', emailError: queueError?.message || 'Failed to enqueue email' } as any),
+                    });
                 });
+        } else {
+            await prisma.invitation.update({
+                where: { id: invitation.id },
+                data: ({
+                    emailStatus: 'FAILED',
+                    emailError: invitationQueue ? 'Email delivery not configured' : 'Email queue not configured',
+                } as any),
+            });
         }
 
-        res.status(201).json(invitation);
+        const updated = await prisma.invitation.findUnique({ where: { id: invitation.id } });
+        res.status(201).json(updated ?? invitation);
     } catch (error) {
         logger.error('Error sending invitation:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const getProjectInvitations = async (req: AuthRequest, res: Response) => {
+    const { projectId } = req.params;
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        const ownerRecord = await prisma.userProject.findFirst({
+            where: { userId, projectId, role: 'OWNER' },
+        });
+
+        if (!ownerRecord) {
+            return res.status(403).json({ message: 'Forbidden: Only the project owner can view invitations' });
+        }
+
+        const invitations = await prisma.invitation.findMany({
+            where: { projectId, status: 'PENDING' },
+            include: {
+                invitedBy: {
+                    select: { name: true, email: true },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        res.json(invitations);
+    } catch (error) {
+        logger.error('Error fetching project invitations:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const resendInvitation = async (req: AuthRequest, res: Response) => {
+    const { projectId, invitationId } = req.params;
+    const userId = (req.user as { sub: string }).sub;
+
+    try {
+        const ownerRecord = await prisma.userProject.findFirst({
+            where: { userId, projectId, role: 'OWNER' },
+        });
+
+        if (!ownerRecord) {
+            return res.status(403).json({ message: 'Forbidden: Only the project owner can resend invitations' });
+        }
+
+        const invitation = await prisma.invitation.findFirst({
+            where: { id: invitationId, projectId, status: 'PENDING' },
+        });
+
+        if (!invitation) {
+            return res.status(404).json({ message: 'Invitation not found or not pending' });
+        }
+
+        const project = await prisma.project.findUnique({ where: { id: projectId } });
+        if (!project) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
+
+        const inviter = await prisma.user.findUnique({
+            where: { id: invitation.invitedById },
+            select: { name: true, email: true },
+        });
+
+        if (invitationQueue && isMailerConfigured) {
+            await prisma.invitation.update({
+                where: { id: invitation.id },
+                data: ({ emailStatus: 'QUEUED', emailError: null } as any),
+            });
+            invitationQueue
+                .add('send-invite-email', {
+                    invitationId: invitation.id,
+                    projectName: project.name,
+                    invitedUserEmail: invitation.invitedUserEmail,
+                    inviterName: inviter?.name || inviter?.email || 'A teammate',
+                    inviterEmail: inviter?.email,
+                })
+                .catch(async (queueError) => {
+                    logger.error('Failed to enqueue invitation resend:', queueError);
+                    await prisma.invitation.update({
+                        where: { id: invitation.id },
+                        data: ({ emailStatus: 'FAILED', emailError: queueError?.message || 'Failed to enqueue email' } as any),
+                    });
+                });
+        } else {
+            await prisma.invitation.update({
+                where: { id: invitation.id },
+                data: ({
+                    emailStatus: 'FAILED',
+                    emailError: invitationQueue ? 'Email delivery not configured' : 'Email queue not configured',
+                } as any),
+            });
+        }
+
+        const updated = await prisma.invitation.findUnique({ where: { id: invitation.id } });
+        res.json(updated);
+    } catch (error) {
+        logger.error('Error resending invitation:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
