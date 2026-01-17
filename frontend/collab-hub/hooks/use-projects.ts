@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createProject, deleteProject, getProject, getProjects, updateProject } from "@/lib/api/services/projects"
+import { createProject, deleteProject, getProject, getProjects, updateMemberRole, updateProject } from "@/lib/api/services/projects"
 import type { Project } from "@/lib/api/types"
 
 export const projectKeys = {
@@ -55,6 +55,19 @@ export const useDeleteProject = () => {
     mutationFn: (projectId: string) => deleteProject(projectId),
     onSuccess: (_, projectId) => {
       queryClient.setQueryData<Project[]>(projectKeys.all, (old) => (old ? old.filter((p) => p.id !== projectId) : old))
+    },
+  })
+}
+
+export const useUpdateMemberRole = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, userId, role }: { projectId: string; userId: string; role: "MANAGER" | "MEMBER" }) =>
+      updateMemberRole(projectId, userId, role),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }

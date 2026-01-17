@@ -16,11 +16,13 @@ export const createTask = async (
   title: string,
   description: string,
   dueDate?: string,
+  assignments?: Array<{ userId: string; note?: string }>,
 ): Promise<Task> => {
   const response = await apiClient.post<Task>(`/projects/${projectId}/tasks`, {
     title,
     description,
     dueDate,
+    assignments,
   })
   return response.data
 }
@@ -37,8 +39,11 @@ export const deleteTask = async (taskId: string): Promise<void> => {
   await apiClient.delete(`/tasks/${taskId}`)
 }
 
-export const assignTask = async (taskId: string, userId: string, note?: string): Promise<void> => {
-  await apiClient.post(`/tasks/${taskId}/assignments`, { userId, note })
+export const assignTask = async (
+  taskId: string,
+  assignments: Array<{ userId: string; note?: string }>,
+): Promise<void> => {
+  await apiClient.post(`/tasks/${taskId}/assign`, { assignments })
 }
 
 export const unassignTask = async (taskId: string, userId: string): Promise<void> => {

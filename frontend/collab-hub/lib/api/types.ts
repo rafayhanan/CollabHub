@@ -19,7 +19,7 @@ export interface ProjectMember {
     id?: string
     userId: string
     projectId: string
-    role: "OWNER" | "ADMIN" | "MEMBER"
+    role: "OWNER" | "MANAGER" | "MEMBER"
     joinedAt: string
     user: {
         id: string

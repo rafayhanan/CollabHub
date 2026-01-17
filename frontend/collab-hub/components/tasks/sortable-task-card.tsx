@@ -11,11 +11,21 @@ interface SortableTaskCardProps {
   onEdit: (task: Task) => void
   onDelete: (task: Task) => void
   onStatusChange: (task: Task, newStatus: Task["status"]) => void
+  canManage: boolean
+  canDelete: boolean
 }
 
-export function SortableTaskCard({ task, onEdit, onDelete, onStatusChange }: SortableTaskCardProps) {
+export function SortableTaskCard({
+  task,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  canManage,
+  canDelete,
+}: SortableTaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
+    disabled: !canManage,
   })
 
   const style = {
@@ -26,7 +36,15 @@ export function SortableTaskCard({ task, onEdit, onDelete, onStatusChange }: Sor
   return (
     <div ref={setNodeRef} style={style} className={cn("touch-none", isDragging && "opacity-60")}>
       <div {...attributes} {...listeners}>
-        <TaskCard task={task} onEdit={onEdit} onDelete={onDelete} onStatusChange={onStatusChange} isDragging={isDragging} />
+        <TaskCard
+          task={task}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onStatusChange={onStatusChange}
+          isDragging={isDragging}
+          canManage={canManage}
+          canDelete={canDelete}
+        />
       </div>
     </div>
   )

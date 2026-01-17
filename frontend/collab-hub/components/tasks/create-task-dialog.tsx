@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,7 +21,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
-import type { Task, Project } from "@/lib/api/types"
+import type { Task, Project, ProjectMember } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api/error"
 
@@ -34,10 +34,12 @@ interface CreateTaskDialogProps {
     description: string,
     status: Task["status"],
     dueDate?: string,
+    assignments?: Array<{ userId: string; note?: string }>,
   ) => Promise<void>
   projects: Project[]
   initialStatus?: Task["status"]
   initialProjectId?: string
+  projectMembers?: Record<string, ProjectMember[]>
 }
 
 export function CreateTaskDialog({
@@ -47,12 +49,17 @@ export function CreateTaskDialog({
   projects,
   initialStatus = "TODO",
   initialProjectId,
+  projectMembers = {},
 }: CreateTaskDialogProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [projectId, setProjectId] = useState(initialProjectId || "")
   const [status, setStatus] = useState<Task["status"]>(initialStatus)
   const [dueDate, setDueDate] = useState<Date>()
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>([])
+  useEffect(() => {
+    setAssignedUserIds([])
+  }, [projectId])
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -77,6 +84,7 @@ export function CreateTaskDialog({
         description.trim(),
         status,
         dueDate ? dueDate.toISOString() : undefined,
+        assignedUserIds.map((userId) => ({ userId })),
       )
       // Reset form
       setTitle("")
@@ -84,6 +92,7 @@ export function CreateTaskDialog({
       setProjectId(initialProjectId || "")
       setStatus(initialStatus)
       setDueDate(undefined)
+      setAssignedUserIds([])
       onOpenChange(false)
     } catch (err) {
       setError(getApiErrorMessage(err, "Failed to create task"))
@@ -162,6 +171,31 @@ export function CreateTaskDialog({
               </Select>
             </div>
           </div>
+
+          {projectId && projectMembers[projectId]?.length ? (
+            <div className="space-y-2">
+              <Label>Assign Members</Label>
+              <div className="space-y-2 rounded-md border p-3">
+                {projectMembers[projectId].map((member) => (
+                  <label key={member.userId} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={assignedUserIds.includes(member.userId)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAssignedUserIds((prev) => [...prev, member.userId])
+                        } else {
+                          setAssignedUserIds((prev) => prev.filter((id) => id !== member.userId))
+                        }
+                      }}
+                    />
+                    <span>{member.user.name || member.user.email}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label>Due Date (Optional)</Label>

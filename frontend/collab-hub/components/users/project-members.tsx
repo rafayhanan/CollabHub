@@ -4,10 +4,11 @@ import { useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Users, Crown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { InviteUserDialog } from "./invite-user-dialog"
-import { useProject } from "@/hooks/use-projects"
+import { useProject, useUpdateMemberRole } from "@/hooks/use-projects"
 import type { ProjectMember } from "@/lib/api/types"
 import { getApiErrorMessage } from "@/lib/api/error"
 
@@ -17,9 +18,10 @@ interface ProjectMembersProps {
   isOwner: boolean
 }
 
-export function ProjectMembers({ projectId, isOwner }: ProjectMembersProps) {
+export function ProjectMembers({ projectId, isOwner, currentUserId }: ProjectMembersProps) {
   const { toast } = useToast()
   const { data: project, isLoading, error } = useProject(projectId)
+  const { mutateAsync: updateMemberRoleMutation } = useUpdateMemberRole()
   const members = useMemo<ProjectMember[]>(() => project?.members || [], [project])
 
   useEffect(() => {
@@ -36,10 +38,26 @@ export function ProjectMembers({ projectId, isOwner }: ProjectMembersProps) {
     switch (role) {
       case "OWNER":
         return "bg-emerald-100 text-emerald-800 border-emerald-200"
-      case "ADMIN":
+      case "MANAGER":
         return "bg-blue-100 text-blue-800 border-blue-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  const handleRoleChange = async (member: ProjectMember, role: "MANAGER" | "MEMBER") => {
+    try {
+      await updateMemberRoleMutation({ projectId, userId: member.userId, role })
+      toast({
+        title: "Role updated",
+        description: `${member.user.name || member.user.email} is now ${role === "MANAGER" ? "Manager" : "Member"}.`,
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(err, "Failed to update member role"),
+        variant: "destructive",
+      })
     }
   }
 
@@ -97,6 +115,21 @@ export function ProjectMembers({ projectId, isOwner }: ProjectMembersProps) {
                 <Badge variant="outline" className={getRoleColor(member.role)}>
                   {member.role}
                 </Badge>
+                {isOwner && member.role !== "OWNER" ? (
+                  <Select
+                    value={member.role}
+                    onValueChange={(value) => handleRoleChange(member, value as "MANAGER" | "MEMBER")}
+                    disabled={member.userId === currentUserId}
+                  >
+                    <SelectTrigger className="h-8 w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MANAGER">Manager</SelectItem>
+                      <SelectItem value="MEMBER">Member</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : null}
                 {/* Remove member button hidden - backend endpoint not implemented yet */}
               </div>
             </div>

@@ -15,9 +15,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { useQueryClient } from "@tanstack/react-query"
-import type { Task } from "@/lib/api/types"
+import type { ProjectMember, Task } from "@/lib/api/types"
 import { useProjects, useCreateProject } from "@/hooks/use-projects"
-import { useAllProjectTasks, useCreateTask, useDeleteTask, useProjectTasks, useUpdateTask } from "@/hooks/use-tasks"
+import {
+  useAllProjectTasks,
+  useAssignTask,
+  useCreateTask,
+  useDeleteTask,
+  useProjectTasks,
+  useUnassignTask,
+  useUpdateTask,
+} from "@/hooks/use-tasks"
 import { Search, Plus, LayoutGrid, List } from "lucide-react"
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog"
 import { useTaskEvents } from "@/hooks/use-websocket"
@@ -26,7 +34,7 @@ import { DndContext, DragOverlay, PointerSensor, closestCenter, useSensor, useSe
 import { TaskCard } from "@/components/tasks/task-card"
 
 export default function TasksPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth()
   const router = useRouter()
   const queryClient = useQueryClient()
   const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects()
@@ -60,6 +68,8 @@ export default function TasksPage() {
   const { mutateAsync: createTaskMutation } = useCreateTask()
   const { mutateAsync: updateTaskMutation } = useUpdateTask()
   const { mutateAsync: deleteTaskMutation } = useDeleteTask()
+  const { mutateAsync: assignTaskMutation } = useAssignTask()
+  const { mutateAsync: unassignTaskMutation } = useUnassignTask()
   const { mutateAsync: createProjectMutation } = useCreateProject()
 
   useEffect(() => {
@@ -85,8 +95,9 @@ export default function TasksPage() {
     description: string,
     status: Task["status"],
     dueDate?: string,
+    assignments?: Array<{ userId: string; note?: string }>,
   ) => {
-    const newTask = await createTaskMutation({ projectId, title, description, dueDate })
+    const newTask = await createTaskMutation({ projectId, title, description, dueDate, assignments })
     if (status !== "TODO") {
       await updateTaskMutation({ taskId: newTask.id, updates: { status } })
     }
@@ -97,6 +108,25 @@ export default function TasksPage() {
     updates: Partial<Pick<Task, "title" | "description" | "status" | "dueDate">>,
   ) => {
     await updateTaskMutation({ taskId, updates })
+  }
+
+  const handleUpdateAssignments = async (task: Task, nextUserIds: string[]) => {
+    const currentIds = new Set(
+      task.assignments?.map((assignment) => assignment.user?.id).filter(Boolean) as string[],
+    )
+    const nextIds = new Set(nextUserIds)
+
+    const toAssign = [...nextIds].filter((id) => !currentIds.has(id))
+    const toUnassign = [...currentIds].filter((id) => !nextIds.has(id))
+
+    if (toAssign.length > 0) {
+      await assignTaskMutation({
+        taskId: task.id,
+        assignments: toAssign.map((userId) => ({ userId })),
+      })
+    }
+
+    await Promise.all(toUnassign.map((userId) => unassignTaskMutation({ taskId: task.id, userId })))
   }
 
   const handleDeleteTask = async (task: Task) => {
@@ -110,11 +140,13 @@ export default function TasksPage() {
   }
 
   const handleEditTask = (task: Task) => {
+    if (!canManageProject(task.projectId)) return
     setEditingTask(task)
     setIsEditTaskDialogOpen(true)
   }
 
   const handleStatusChange = async (task: Task, newStatus: Task["status"]) => {
+    if (!canManageProject(task.projectId)) return
     await handleUpdateTask(task.id, { status: newStatus })
   }
 
@@ -170,6 +202,23 @@ export default function TasksPage() {
   const todoTasks = filteredTasks.filter((task) => task.status === "TODO")
   const inProgressTasks = filteredTasks.filter((task) => task.status === "IN_PROGRESS")
   const doneTasks = filteredTasks.filter((task) => task.status === "DONE")
+  const roleByProjectId = useMemo(
+    () =>
+      new Map(
+        projects.map((project) => [
+          project.id,
+          project.members?.find((member) => member.userId === user?.id)?.role || "MEMBER",
+        ]),
+      ),
+    [projects, user?.id],
+  )
+  const canManageProject = (projectId: string) => {
+    const role = roleByProjectId.get(projectId)
+    return role === "OWNER" || role === "MANAGER"
+  }
+  const canDeleteProjectTasks = (projectId: string) => roleByProjectId.get(projectId) === "OWNER"
+  const canCreateAnyTask = projects.some((project) => canManageProject(project.id))
+  const manageableProjects = projects.filter((project) => canManageProject(project.id))
   const tasksById = useMemo(() => new Map(filteredTasks.map((task) => [task.id, task])), [filteredTasks])
   const activeTask = activeTaskId ? tasksById.get(activeTaskId) : null
 
@@ -180,7 +229,13 @@ export default function TasksPage() {
   )
 
   const handleDragStart = (event: { active: { id: string | number } }) => {
-    setActiveTaskId(String(event.active.id))
+    const activeId = String(event.active.id)
+    const task = tasksById.get(activeId)
+    if (task && !canManageProject(task.projectId)) {
+      setActiveTaskId(null)
+      return
+    }
+    setActiveTaskId(activeId)
   }
 
   const handleDragEnd = (event: { active: { id: string | number }; over: { id: string | number } | null }) => {
@@ -259,10 +314,12 @@ export default function TasksPage() {
                 <h1 className="text-2xl font-bold text-balance">Task Management</h1>
                 <p className="text-muted-foreground">Organize and track your tasks across all projects.</p>
               </div>
-              <Button onClick={() => setIsCreateTaskDialogOpen(true)} className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                New Task
-              </Button>
+              {canCreateAnyTask ? (
+                <Button onClick={() => setIsCreateTaskDialogOpen(true)} className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Task
+                </Button>
+              ) : null}
             </div>
 
             {/* Filters */}
@@ -329,16 +386,20 @@ export default function TasksPage() {
                 onDragCancel={handleDragCancel}
               >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <KanbanColumn
+                <KanbanColumn
                     title="Todo"
                     status="TODO"
                     tasks={todoTasks}
                     onTaskEdit={handleEditTask}
                     onTaskDelete={handleDeleteTask}
                     onTaskStatusChange={handleStatusChange}
+                  canManageTask={(task) => canManageProject(task.projectId)}
+                  canDeleteTask={(task) => canDeleteProjectTasks(task.projectId)}
+                  canCreateTask={canCreateAnyTask}
                     onCreateTask={(status) => {
-                      setCreateTaskStatus(status)
-                      setIsCreateTaskDialogOpen(true)
+                    if (!canCreateAnyTask) return
+                    setCreateTaskStatus(status)
+                    setIsCreateTaskDialogOpen(true)
                     }}
                     color="bg-muted"
                   />
@@ -349,9 +410,13 @@ export default function TasksPage() {
                     onTaskEdit={handleEditTask}
                     onTaskDelete={handleDeleteTask}
                     onTaskStatusChange={handleStatusChange}
+                  canManageTask={(task) => canManageProject(task.projectId)}
+                  canDeleteTask={(task) => canDeleteProjectTasks(task.projectId)}
+                  canCreateTask={canCreateAnyTask}
                     onCreateTask={(status) => {
-                      setCreateTaskStatus(status)
-                      setIsCreateTaskDialogOpen(true)
+                    if (!canCreateAnyTask) return
+                    setCreateTaskStatus(status)
+                    setIsCreateTaskDialogOpen(true)
                     }}
                     color="bg-secondary"
                   />
@@ -362,9 +427,13 @@ export default function TasksPage() {
                     onTaskEdit={handleEditTask}
                     onTaskDelete={handleDeleteTask}
                     onTaskStatusChange={handleStatusChange}
+                  canManageTask={(task) => canManageProject(task.projectId)}
+                  canDeleteTask={(task) => canDeleteProjectTasks(task.projectId)}
+                  canCreateTask={canCreateAnyTask}
                     onCreateTask={(status) => {
-                      setCreateTaskStatus(status)
-                      setIsCreateTaskDialogOpen(true)
+                    if (!canCreateAnyTask) return
+                    setCreateTaskStatus(status)
+                    setIsCreateTaskDialogOpen(true)
                     }}
                     color="bg-primary"
                   />
@@ -378,6 +447,8 @@ export default function TasksPage() {
                         onDelete={handleDeleteTask}
                         onStatusChange={handleStatusChange}
                         isDragging
+                        canManage={canManageProject(activeTask.projectId)}
+                        canDelete={canDeleteProjectTasks(activeTask.projectId)}
                       />
                     </div>
                   ) : null}
@@ -427,14 +498,24 @@ export default function TasksPage() {
         open={isCreateTaskDialogOpen}
         onOpenChange={setIsCreateTaskDialogOpen}
         onCreateTask={handleCreateTask}
-        projects={projects}
+        projects={manageableProjects}
         initialStatus={createTaskStatus}
+        projectMembers={projects.reduce<Record<string, ProjectMember[]>>((acc, project) => {
+          acc[project.id] = project.members || []
+          return acc
+        }, {})}
       />
 
       <EditTaskDialog
         open={isEditTaskDialogOpen}
         onOpenChange={setIsEditTaskDialogOpen}
         onUpdateTask={handleUpdateTask}
+        onUpdateAssignments={handleUpdateAssignments}
+        canManageTask={(task) => canManageProject(task.projectId)}
+        projectMembers={projects.reduce<Record<string, ProjectMember[]>>((acc, project) => {
+          acc[project.id] = project.members || []
+          return acc
+        }, {})}
         task={editingTask}
       />
 

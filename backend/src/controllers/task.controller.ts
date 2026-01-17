@@ -4,6 +4,8 @@ import { AuthRequest } from '../utils/types';
 import logger from '../utils/logger';
 import { createNotification } from '../utils/notifications';
 
+const canManageTasks = (role?: string | null) => role === 'OWNER' || role === 'MANAGER';
+
 export const createTask = async (req: AuthRequest, res: Response) => {
     const { projectId } = req.params;
     const { title, description, status, dueDate, assignments } = req.body as {
@@ -17,16 +19,16 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 
     try {
         const task = await prisma.$transaction(async (tx) => {
-            // 1. Authorize: Check if the user is a member of the project
+            // 1. Authorize: Check if the user is a manager (OWNER/MANAGER) of the project
             const member = await tx.userProject.findUnique({
                 where: {
                     userId_projectId: { userId, projectId },
                 },
             });
 
-            if (!member) {
+            if (!member || !canManageTasks(member.role)) {
                 // This will cause the transaction to roll back
-                throw new Error('Forbidden: You are not a member of this project.');
+                throw new Error('Forbidden: You do not have permission to create tasks in this project.');
             }
 
             // 2. Create the core task
@@ -42,13 +44,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 
             // 3. Handle optional at-creation assignments
             if (assignments && assignments.length > 0) {
-                // Only OWNER can assign at creation
-                const ownerRecord = await tx.userProject.findFirst({
-                    where: { userId, projectId, role: 'OWNER' },
-                });
-                if (!ownerRecord) {
-                    throw new Error('Forbidden: Only the project owner can assign users at creation.');
-                }
+                // Only OWNER/MANAGER can assign at creation
 
                 const assigneeIds = assignments.map((a) => a.userId);
 
@@ -145,10 +141,12 @@ export const assignTask = async (req: AuthRequest, res: Response) => {
 
         const projectId = task.projectId;
 
-        // Only OWNER can assign
-        const ownerRecord = await prisma.userProject.findFirst({ where: { userId, projectId, role: 'OWNER' } });
-        if (!ownerRecord) {
-            return res.status(403).json({ message: 'Forbidden: Only the project owner can assign users to tasks.' });
+        // Only OWNER/MANAGER can assign
+        const managerRecord = await prisma.userProject.findFirst({
+            where: { userId, projectId, role: { in: ['OWNER', 'MANAGER'] } },
+        });
+        if (!managerRecord) {
+            return res.status(403).json({ message: 'Forbidden: Only project managers can assign users to tasks.' });
         }
 
         const assigneeIds = assignments.map((a) => a.userId);
@@ -319,6 +317,10 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
             return res.status(403).json({ message: 'Forbidden: You are not a member of this project.' });
         }
 
+        if (!canManageTasks(member.role)) {
+            return res.status(403).json({ message: 'Forbidden: You do not have permission to update tasks in this project.' });
+        }
+
         const updateData: any = {};
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
@@ -435,17 +437,17 @@ export const unassignTask = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        // Only project owner can unassign users
-        const ownerRecord = await prisma.userProject.findFirst({
+        // Only project managers can unassign users
+        const managerRecord = await prisma.userProject.findFirst({
             where: {
                 userId,
                 projectId: task.projectId,
-                role: 'OWNER',
+                role: { in: ['OWNER', 'MANAGER'] },
             },
         });
 
-        if (!ownerRecord) {
-            return res.status(403).json({ message: 'Forbidden: Only the project owner can unassign users from tasks.' });
+        if (!managerRecord) {
+            return res.status(403).json({ message: 'Forbidden: Only project managers can unassign users from tasks.' });
         }
 
         // Check if the assignment exists
