@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
@@ -14,15 +14,52 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { Project } from "@/lib/api/types"
 import { useCreateProject, useDeleteProject, useProjects } from "@/hooks/use-projects"
-import { useUserTasks } from "@/hooks/use-tasks"
+import { useAllProjectTasks, useUserTasks } from "@/hooks/use-tasks"
 import { Plus, CheckSquare, Clock, AlertCircle, TrendingUp } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/api/error"
 
 export default function DashboardPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth()
   const router = useRouter()
   const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects()
   const { data: userTasks = [], isLoading: tasksLoading, error: tasksError } = useUserTasks()
+  const roleByProjectId = useMemo(
+    () =>
+      new Map(
+        projects.map((project) => [
+          project.id,
+          project.members?.find((member) => member.userId === user?.id)?.role || "MEMBER",
+        ]),
+      ),
+    [projects, user?.id],
+  )
+  const managedProjectIds = useMemo(
+    () =>
+      projects
+        .filter((project) => {
+          const role = roleByProjectId.get(project.id)
+          return role === "OWNER" || role === "MANAGER"
+        })
+        .map((project) => project.id),
+    [projects, roleByProjectId],
+  )
+  const isManagerOrOwner = managedProjectIds.length > 0
+  const {
+    data: managedProjectTasks = [],
+    isLoading: managedTasksLoading,
+    error: managedTasksError,
+  } = useAllProjectTasks(managedProjectIds, isManagerOrOwner)
+  const projectTaskStats = useMemo(() => {
+    const stats = new Map<string, { total: number; completed: number; inProgress: number }>()
+    for (const task of managedProjectTasks) {
+      const current = stats.get(task.projectId) || { total: 0, completed: 0, inProgress: 0 }
+      current.total += 1
+      if (task.status === "DONE") current.completed += 1
+      if (task.status === "IN_PROGRESS") current.inProgress += 1
+      stats.set(task.projectId, current)
+    }
+    return stats
+  }, [managedProjectTasks])
   const [isLoading, setIsLoading] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [error, setError] = useState("")
@@ -41,10 +78,10 @@ export default function DashboardPage() {
   }, [isAuthenticated, authLoading, router])
 
   useEffect(() => {
-    if (projectsError || tasksError) {
-      setError(getApiErrorMessage(projectsError || tasksError, "Failed to load dashboard data"))
+    if (projectsError || tasksError || managedTasksError) {
+      setError(getApiErrorMessage(projectsError || tasksError || managedTasksError, "Failed to load dashboard data"))
     }
-  }, [projectsError, tasksError])
+  }, [projectsError, tasksError, managedTasksError])
 
   const handleCreateProject = async (name: string, description: string) => {
     await createProjectMutation({ name, description })
@@ -61,7 +98,7 @@ export default function DashboardPage() {
     console.log("Edit project:", project)
   }
 
-  if (authLoading || isLoading || projectsLoading || tasksLoading) {
+  if (authLoading || isLoading || projectsLoading || tasksLoading || managedTasksLoading) {
     return (
       <div className="flex min-h-screen md:h-screen">
         <div className="hidden md:block w-64 border-r bg-sidebar">
@@ -87,7 +124,15 @@ export default function DashboardPage() {
     )
   }
 
+  const overviewTasks = isManagerOrOwner ? managedProjectTasks : userTasks
   const taskStats = {
+    total: overviewTasks.length,
+    todo: overviewTasks.filter((t) => t.status === "TODO").length,
+    inProgress: overviewTasks.filter((t) => t.status === "IN_PROGRESS").length,
+    completed: overviewTasks.filter((t) => t.status === "DONE").length,
+    overdue: overviewTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "DONE").length,
+  }
+  const myTaskStats = {
     total: userTasks.length,
     todo: userTasks.filter((t) => t.status === "TODO").length,
     inProgress: userTasks.filter((t) => t.status === "IN_PROGRESS").length,
@@ -116,7 +161,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${isManagerOrOwner ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
@@ -130,7 +175,7 @@ export default function DashboardPage() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">My Tasks</CardTitle>
+                  <CardTitle className="text-sm font-medium">{isManagerOrOwner ? "All Tasks" : "My Tasks"}</CardTitle>
                   <CheckSquare className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -140,6 +185,21 @@ export default function DashboardPage() {
                   </p>
                 </CardContent>
               </Card>
+
+              {isManagerOrOwner && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">My Tasks</CardTitle>
+                    <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{myTaskStats.total}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {myTaskStats.completed} completed, {myTaskStats.inProgress} in progress
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -201,7 +261,11 @@ export default function DashboardPage() {
                   {projects.map((project) => (
                     <ProjectCard
                       key={project.id}
-                      project={project}
+                      project={{
+                        ...project,
+                        taskStats: projectTaskStats.get(project.id),
+                        memberCount: project.members?.length,
+                      }}
                       onEdit={handleEditProject}
                       onDelete={handleDeleteProject}
                     />
@@ -211,9 +275,48 @@ export default function DashboardPage() {
             </div>
 
             {/* Recent Tasks */}
-            {userTasks.length > 0 && (
+            {overviewTasks.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Recent Tasks</h2>
+                <h2 className="text-xl font-semibold">{isManagerOrOwner ? "Recent Tasks (All Projects)" : "Recent Tasks"}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {overviewTasks.slice(0, 4).map((task) => (
+                    <Card key={task.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <CardTitle className="text-base text-balance">{task.title}</CardTitle>
+                          <Badge
+                            variant={
+                              task.status === "DONE"
+                                ? "default"
+                                : task.status === "IN_PROGRESS"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {task.status.replace("_", " ")}
+                          </Badge>
+                        </div>
+                        {task.description && (
+                          <CardDescription className="text-sm text-pretty">{task.description}</CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        {task.dueDate && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Due {new Date(task.dueDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isManagerOrOwner && userTasks.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">My Assigned Tasks</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {userTasks.slice(0, 4).map((task) => (
                     <Card key={task.id}>
