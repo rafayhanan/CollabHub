@@ -9,20 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
 import { useInvitations } from "@/hooks/use-invitations"
-import {
-  Home,
-  FolderOpen,
-  CheckSquare,
-  MessageSquare,
-  Users,
-  Settings,
-  LogOut,
-  Plus,
-  ChevronDown,
-  ChevronRight,
-  Mail,
-  Bell,
-} from "lucide-react"
+import { Home, FolderOpen, CheckSquare, MessageSquare, Users, LogOut, Plus, ChevronDown, ChevronRight, Mail, Bell } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface SidebarProps {
@@ -201,15 +188,6 @@ export function Sidebar({ projects, onCreateProject, onNavigate, className }: Si
           </div>
         </div>
         <div className="flex space-x-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1 text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={() => onNavigate?.()}
-          >
-            <Settings className="h-3 w-3 mr-1" />
-            Settings
-          </Button>
           <Button
             variant="ghost"
             size="sm"
